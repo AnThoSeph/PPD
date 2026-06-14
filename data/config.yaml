@@ -1,0 +1,3 @@
+template: resume-io-clone
+resume: data/resume.yaml
+output: output/resume.pdf

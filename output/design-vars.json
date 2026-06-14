@@ -1,0 +1,20 @@
+{
+  "template_id": "anshual-frontend",
+  "header_bg": "#000000",
+  "header_text": "#ffffff",
+  "sidebar_bg": "#000000",
+  "accent": "#000000",
+  "main_text": "#000000",
+  "muted": "#333333",
+  "font_body": "CIDFont+F2",
+  "font_heading": "CIDFont+F2",
+  "layout": "anshual-frontend",
+  "layout_hint": "anshual-frontend",
+  "source": "AnshualThomas_Resume_26022026SDEIFrontend.pdf",
+  "page_margin_x_pt": 37.0,
+  "page_margin_y_pt": 20.0,
+  "name_size_pt": 27.9,
+  "section_size_pt": 17.0,
+  "body_size_pt": 14.0,
+  "source_pdf": "C:\\Users\\anshu\\Documents\\PPD\\data\\source\\upload.pdf"
+}

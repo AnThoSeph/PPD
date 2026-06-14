@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PPD Editor - Advanced Resume Dashboard</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <p id="loading-message" style="margin-top:16px;font-size:16px;">Connecting to PPD engine…</p>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">📄</div>
+      <div>
+        <h1>PPD Editor</h1>
+        <p>Resume OS v3.0</p>
+      </div>
+    </div>
+    <nav style="flex:1">
+      <p class="nav-section">Main</p>
+      <button class="nav-btn active" data-view="editor">✏️ Editor</button>
+      <button class="nav-btn" data-view="templates">🎨 Templates</button>
+      <button class="nav-btn" data-view="skillgap">📊 Skill Gap</button>
+      <p class="nav-section">Import</p>
+      <button class="nav-btn primary-action" id="btn-upload">⬆️ Upload PDF / Image</button>
+      <button class="nav-btn" id="btn-extract">📝 Re-extract Last Upload</button>
+      <p class="nav-section">Applications</p>
+      <button class="nav-btn" data-view="jobs">💼 Job Tracker</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <div>
+          <p id="user-name" style="font-weight:700;font-size:14px">Your Name</p>
+          <p id="user-title" style="font-size:12px;color:rgba(255,255,255,0.5)">Professional</p>
+        </div>
+      </div>
+      <button class="btn-save-sidebar" id="btn-save">Save Resume</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="header">
+      <div>
+        <div class="header-title">Resume Utility AI</div>
+        <div class="header-sub" id="sync-label">Local storage</div>
+      </div>
+      <div class="header-actions">
+        <div class="search-box">
+          <span>🔍</span>
+          <input id="search-input" type="text" placeholder="Quick search…"/>
+        </div>
+        <button class="btn-icon" id="btn-toggle-ai" title="Toggle AI Assistant">✨</button>
+        <button class="btn-icon" id="btn-dark" title="Dark mode">🌙</button>
+        <button class="btn-export" id="btn-export" title="Choose save location and filename">Export PDF…</button>
+      </div>
+    </header>
+
+    <!-- Editor view -->
+    <div id="view-editor" class="view">
+      <div class="view-grid" id="editor-grid">
+        <div class="panel editor-panel">
+          <div class="panel-head">
+            <span>Editor Sections</span>
+            <span id="sync-badge" class="badge-sync">UNSAVED</span>
+          </div>
+          <div id="section-editor" class="section-editor-scroll"></div>
+          <div class="panel-foot">
+            <span id="editor-stats">Sections ready</span>
+            <div style="display:flex;gap:12px">
+              <button id="btn-refresh-preview" style="color:#0891b2;font-weight:700;font-size:11px">Update Preview</button>
+              <button id="btn-toggle-yaml" style="color:#08677f;font-weight:700;font-size:11px">YAML</button>
+            </div>
+          </div>
+          <div id="yaml-panel" class="editor-wrap hidden">
+            <div id="line-numbers">1</div>
+            <textarea id="yaml-editor" spellcheck="false" placeholder="Advanced YAML view…"></textarea>
+          </div>
+        </div>
+
+        <div class="panel ai-panel" id="ai-panel">
+          <div class="panel-head panel-head-compact">
+            <span>PPD AI</span>
+            <button type="button" id="btn-collapse-ai" class="btn-panel-toggle" title="Hide assistant">✕</button>
+          </div>
+          <div id="chat-messages" class="chat-area"></div>
+          <div id="suggestions-container" class="suggestions"></div>
+          <div class="chat-input-area">
+            <div class="chat-input-wrap">
+              <textarea id="chat-input" rows="1" placeholder="Ask AI…"></textarea>
+              <button class="chat-send" id="chat-send" title="Send">➤</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-col">
+          <div class="panel theme-panel">
+            <strong id="preview-template-title">Live Preview</strong>
+            <p id="preview-mode-note" class="preview-mode-note">Upload a PDF — your exact layout becomes the default template.</p>
+            <p class="template-picker-label">Choose template</p>
+            <div id="template-picker" class="template-picker"></div>
+          </div>
+          <div class="preview-box">
+            <div class="preview-scores">
+              <div class="score-card">
+                <div>
+                  <div style="font-size:10px;font-weight:700;color:#3f484c;text-transform:uppercase">ATS Score</div>
+                  <div class="score-num" id="ats-score">0%</div>
+                  <div id="ats-label" style="font-size:11px;color:#10b981;font-weight:700">—</div>
+                </div>
+              </div>
+              <div class="skill-badge" id="skill-match">Skill Match: 0%</div>
+            </div>
+            <div class="preview-canvas">
+              <div id="preview-pages"></div>
+              <img id="preview-img" class="hidden" alt="Resume preview"/>
+              <div id="preview-placeholder" class="preview-placeholder">
+                <div style="height:20px;width:128px;background:#1e293b;border-radius:4px;margin-bottom:8px"></div>
+                <div style="height:8px;width:80px;background:#94a3b8;border-radius:4px;margin-bottom:24px"></div>
+                <div style="height:8px;background:#e2e8f0;border-radius:4px;margin-bottom:8px"></div>
+                <div style="height:8px;background:#e2e8f0;border-radius:4px;margin-bottom:8px"></div>
+                <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:32px">Upload PDF → preview appears here</p>
+              </div>
+            </div>
+            <div class="preview-toolbar">
+              <button id="btn-open-pdf" title="Open PDF">📂 Open</button>
+              <button id="btn-analyze" title="Analyze design">🔬 Analyze</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-skillgap" class="sub-view hidden">
+      <div class="sub-panel">
+        <h2>📊 Skill Gap Analysis</h2>
+        <p id="skill-gap-rec" style="margin-bottom:20px;color:#3f484c"></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <div><h3 style="font-size:12px;text-transform:uppercase;margin-bottom:8px">Matched</h3><ul id="skill-matched" class="skill-list"></ul></div>
+          <div><h3 style="font-size:12px;text-transform:uppercase;margin-bottom:8px;color:#ba1a1a">Missing</h3><ul id="skill-missing" class="skill-list"></ul></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-jobs" class="sub-view hidden">
+      <div class="sub-panel jobs-panel">
+        <div class="jobs-header">
+          <div>
+            <h2>💼 Job Tracker</h2>
+            <p class="jobs-subtitle">Track applications, follow-ups, and which resume you sent.</p>
+          </div>
+          <button type="button" id="btn-add-job-open" class="btn-jobs-primary">+ Add Application</button>
+        </div>
+
+        <div id="jobs-stats" class="jobs-stats"></div>
+
+        <div class="jobs-toolbar">
+          <input id="jobs-search" type="search" placeholder="Search company, role, notes…"/>
+          <select id="jobs-filter-status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="wishlist">Wishlist</option>
+            <option value="applied">Applied</option>
+            <option value="screening">Screening</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+          <select id="jobs-sort" aria-label="Sort applications">
+            <option value="updated_desc">Recently updated</option>
+            <option value="applied_desc">Date applied (newest)</option>
+            <option value="applied_asc">Date applied (oldest)</option>
+            <option value="follow_up">Follow-up due</option>
+            <option value="company">Company A–Z</option>
+          </select>
+        </div>
+
+        <div id="jobs-list" class="jobs-list"></div>
+      </div>
+    </div>
+
+    <div id="job-modal" class="job-modal hidden" role="dialog" aria-modal="true" aria-labelledby="job-modal-title">
+      <div class="job-modal-backdrop" id="job-modal-backdrop"></div>
+      <div class="job-modal-card">
+        <div class="job-modal-header">
+          <h3 id="job-modal-title">Add Application</h3>
+          <button type="button" class="job-modal-close" id="job-modal-close" aria-label="Close">×</button>
+        </div>
+        <form id="job-form" class="job-form">
+          <input type="hidden" id="job-id"/>
+          <div class="job-form-grid">
+            <label class="job-field span-2">
+              <span>Company *</span>
+              <input id="job-company" required placeholder="Acme Corp"/>
+            </label>
+            <label class="job-field span-2">
+              <span>Role / Title *</span>
+              <input id="job-role" required placeholder="Software Engineer"/>
+            </label>
+            <label class="job-field">
+              <span>Status</span>
+              <select id="job-status">
+                <option value="wishlist">Wishlist</option>
+                <option value="applied" selected>Applied</option>
+                <option value="screening">Screening</option>
+                <option value="interview">Interview</option>
+                <option value="offer">Offer</option>
+                <option value="rejected">Rejected</option>
+                <option value="withdrawn">Withdrawn</option>
+              </select>
+            </label>
+            <label class="job-field">
+              <span>Priority</span>
+              <select id="job-priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label class="job-field">
+              <span>Date applied</span>
+              <input id="job-date-applied" type="date"/>
+            </label>
+            <label class="job-field">
+              <span>Follow-up date</span>
+              <input id="job-follow-up" type="date"/>
+            </label>
+            <label class="job-field span-2">
+              <span>Location</span>
+              <input id="job-location" placeholder="Remote · San Francisco, CA"/>
+            </label>
+            <label class="job-field span-2">
+              <span>Job posting URL</span>
+              <input id="job-url" type="url" placeholder="https://…"/>
+            </label>
+            <label class="job-field">
+              <span>Salary range</span>
+              <input id="job-salary" placeholder="$120k – $150k"/>
+            </label>
+            <label class="job-field">
+              <span>Source</span>
+              <select id="job-source">
+                <option value="">—</option>
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Indeed">Indeed</option>
+                <option value="Company site">Company site</option>
+                <option value="Referral">Referral</option>
+                <option value="Recruiter">Recruiter</option>
+                <option value="Job fair">Job fair</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label class="job-field">
+              <span>Contact name</span>
+              <input id="job-contact-name" placeholder="Recruiter name"/>
+            </label>
+            <label class="job-field">
+              <span>Contact email</span>
+              <input id="job-contact-email" type="email" placeholder="recruiter@company.com"/>
+            </label>
+            <label class="job-field span-2">
+              <span>Resume / template used</span>
+              <select id="job-resume-template">
+                <option value="">Current default</option>
+              </select>
+            </label>
+            <label class="job-field span-2">
+              <span>Notes</span>
+              <textarea id="job-notes" rows="4" placeholder="Interview prep, talking points, feedback…"></textarea>
+            </label>
+          </div>
+          <div class="job-form-actions">
+            <button type="button" class="btn-jobs-danger hidden" id="job-delete-btn">Delete</button>
+            <div class="job-form-actions-right">
+              <button type="button" class="btn-jobs-secondary" id="job-cancel-btn">Cancel</button>
+              <button type="submit" class="btn-jobs-primary">Save Application</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="view-templates" class="sub-view hidden">
+      <div class="sub-panel templates-page">
+        <h2>Resume Templates</h2>
+        <p class="templates-intro">Your uploaded PDF is the default template. Choose from 11 ATS-friendly layouts below — all use your extracted content, single-column, and parser-safe formatting.</p>
+        <div id="templates-gallery" class="templates-gallery"></div>
+        <button id="btn-analyze-design" class="btn-analyze-design">Re-analyze uploaded PDF design</button>
+      </div>
+    </div>
+
+    <div id="status-bar">Ready</div>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+<script src="section-editor.js"></script>
+<script src="job-tracker.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
