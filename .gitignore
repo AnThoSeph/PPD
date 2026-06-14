@@ -8,12 +8,14 @@ dist-win/
 dist2/
 build/
 build2/
+tools/
 output/*.pdf
 output/*.png
 output/preview-pages/
 output/*.yaml
 output/design-vars.json
-data/source/*.pdf
+data/source/*
+!data/source/.gitkeep
 data/*.draft.yaml
 data/raw-extract.txt
 data/_typst_compile*.yaml

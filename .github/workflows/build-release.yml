@@ -50,7 +50,14 @@ jobs:
             libwebkit2gtk-4.1-0 \
             libwebkit2gtk-4.1-dev \
             libcanberra-gtk3-module \
-            gir1.2-webkit2-4.1
+            gir1.2-webkit2-4.1 \
+            tesseract-ocr
+
+      - name: Install Tesseract (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install tesseract -y --no-progress
 
       - name: Install Python dependencies
         run: |
@@ -61,30 +68,29 @@ jobs:
       - name: Build with PyInstaller
         run: python -m PyInstaller ppd.spec --noconfirm --clean
 
-      - name: Bundle Typst (Windows)
+      - name: Bundle tools (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          $dist = "dist/PPD-Resume"
-          New-Item -ItemType Directory -Force -Path "$dist/tools", "$dist/data/source", "$dist/output" | Out-Null
-          $zipUrl = "https://github.com/typst/typst/releases/download/v$env:TYPST_VERSION/typst-x86_64-pc-windows-msvc.zip"
-          Invoke-WebRequest -Uri $zipUrl -OutFile "$env:RUNNER_TEMP/typst.zip" -UseBasicParsing
-          Expand-Archive -Path "$env:RUNNER_TEMP/typst.zip" -DestinationPath "$env:RUNNER_TEMP/typst-extract" -Force
-          $typst = Get-ChildItem -Path "$env:RUNNER_TEMP/typst-extract" -Recurse -Filter "typst.exe" | Select-Object -First 1
-          Copy-Item $typst.FullName "$dist/tools/typst.exe" -Force
+        run: ./scripts/bundle-tools-windows.ps1 -DistDir dist/PPD-Resume
 
-      - name: Bundle Typst (Linux)
+      - name: Bundle tools (Linux)
         if: runner.os == 'Linux'
         run: |
           dist="dist/PPD-Resume"
-          mkdir -p "$dist/tools" "$dist/data/source" "$dist/output"
+          mkdir -p "$dist/tools/tessdata" "$dist/data/source" "$dist/output"
           curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
             -o /tmp/typst.tar.xz
           mkdir -p /tmp/typst-extract
           tar -xJf /tmp/typst.tar.xz -C /tmp/typst-extract
           typst_bin="$(find /tmp/typst-extract -name typst -type f | head -1)"
           cp "$typst_bin" "$dist/tools/typst"
-          chmod +x "$dist/tools/typst" "$dist/PPD-Resume"
+          chmod +x "$dist/tools/typst"
+          cp "$(command -v tesseract)" "$dist/tools/tesseract"
+          tessdata_src="$(find /usr/share/tesseract-ocr -type d -name tessdata | head -1)"
+          if [[ -n "$tessdata_src" ]]; then
+            cp -r "$tessdata_src/." "$dist/tools/tessdata/"
+          fi
+          chmod +x "$dist/PPD-Resume" "$dist/tools/tesseract"
 
       - name: Create archive (Windows)
         if: runner.os == 'Windows'

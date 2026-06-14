@@ -44,6 +44,7 @@ a = Analysis(
         "ppd.paths",
         "ppd.schema",
         "ppd.build",
+        "ppd.tesseract_util",
     ],
     hookspath=[],
     hooksconfig={},

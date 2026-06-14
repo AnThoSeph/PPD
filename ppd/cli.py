@@ -51,14 +51,6 @@ def gui() -> None:
 
 
 @main.command()
-def gui_tk() -> None:
-    """Launch the legacy tkinter app."""
-    from ppd.gui import main_tk
-
-    main_tk()
-
-
-@main.command()
 @click.argument("pdf_path", type=click.Path(exists=True, path_type=Path))
 @click.option("--output", "spec_path", type=click.Path(path_type=Path), default=PROJECT_ROOT / "design-spec.json")
 def analyze(pdf_path: Path, spec_path: Path) -> None:

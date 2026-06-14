@@ -50,7 +50,7 @@ powershell -File build-exe.ps1
 
 This creates `dist\PPD-Resume\` — copy that **entire folder** anywhere and run `PPD-Resume.exe`. No Python install needed on that machine.
 
-Bundled inside: app + Typst (for PDF export). For **image OCR**, Tesseract must still be installed: `winget install UB-Mannheim.TesseractOCR`
+Bundled inside: app + Typst + Tesseract (for image OCR when built with `build-exe.bat`).
 
 ## Desktop app workflow
 
