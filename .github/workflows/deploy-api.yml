@@ -1,0 +1,40 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main, feat/build-ocr-and-cleanup]
+    paths:
+      - 'ppd/**'
+      - 'templates/**'
+      - 'Dockerfile'
+      - 'pyproject.toml'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t ppd-api:ci .
+
+      - name: Smoke test container
+        run: |
+          docker run -d --name ppd-api-test -p 8765:8765 ppd-api:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/health; then
+              echo "API healthy"
+              docker stop ppd-api-test
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ppd-api-test
+          docker stop ppd-api-test || true
+          exit 1

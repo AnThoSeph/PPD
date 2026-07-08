@@ -1,0 +1,3 @@
+workspaces/
+*.draft.yaml
+data/_typst_compile*.yaml
