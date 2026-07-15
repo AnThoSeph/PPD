@@ -11,16 +11,19 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    xz-utils \
     tesseract-ocr \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Download to a file first (pipe + tar -xJ fails without xz-utils on slim images).
 RUN curl -fsSL "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
-    | tar -xJ -C /tmp \
-    && mv /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst \
-    && chmod +x /usr/local/bin/typst \
-    && rm -rf /tmp/typst-*
+    -o /tmp/typst.tar.xz \
+    && mkdir -p /tmp/typst-extract \
+    && tar -xJf /tmp/typst.tar.xz -C /tmp/typst-extract \
+    && install -m 755 "$(find /tmp/typst-extract -name typst -type f | head -1)" /usr/local/bin/typst \
+    && rm -rf /tmp/typst.tar.xz /tmp/typst-extract
 
 COPY pyproject.toml README.md ./
 COPY ppd ./ppd
