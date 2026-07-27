@@ -51,6 +51,17 @@ def gui() -> None:
 
 
 @main.command()
+@click.option("--host", default="0.0.0.0", show_default=True)
+@click.option("--port", default=8765, show_default=True, type=int)
+@click.option("--reload", is_flag=True, help="Auto-reload on code changes (dev only).")
+def serve(host: str, port: int, reload: bool) -> None:
+    """Start the REST API server for mobile clients."""
+    import uvicorn
+
+    uvicorn.run("ppd.http_server:app", host=host, port=port, reload=reload)
+
+
+@main.command()
 @click.argument("pdf_path", type=click.Path(exists=True, path_type=Path))
 @click.option("--output", "spec_path", type=click.Path(path_type=Path), default=PROJECT_ROOT / "design-spec.json")
 def analyze(pdf_path: Path, spec_path: Path) -> None:

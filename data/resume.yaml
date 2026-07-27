@@ -1,121 +1,87 @@
 resume:
   personal:
-    name: LENA BIJU
-    location: Ollur, Kerala 680306
-    phone: +91 9447900650
-    email: lenabiju2001@gmail.com
+    name: Thrissur, Kerala 680010
+    title: AKSHAY SREEKUMAR
+    phone: https://www.behance.net/gallery/199929887/Portfolio
+    email: akshaysk59@gmail.com
   summary:
-    text: Detail-oriented and adaptive Computer Science graduate with hands-on experience
-      in Java development, object-oriented programming, and backend system design.
-      Proficient in writing clean, maintainable Java code and optimizing system performance.
-      Demonstrated ability to solve complex problems and deliver robust solutions
-      under tight deadlines through internships, projects, and hackathons. Designed
-      both the website and app in Figma to ensure a user-friendly interface.   Implemented
-      Convolutional Neural Network (CNN) methods for accurate image recognition and
-      matching.  Ensured seamless integration between the app and website, enhancing
-      the efficiency of the alert system for missing persons. · Online Portfolio Website
-       Designed and developed a personal portfolio website to showcase projects and
-      skills. Used HTML, CSS, and JavaScript for front-end development.  Integrated
-      responsive design principles to ensure compatibility across devices. 
+    text: PROFESSIONAL As a skilled 3D artist and developer, specialize in bringing
+      ideas to life using a combination of artistic flair and technical proficiency.
+      With a solid foundation in tools like Blender 3D and Adobe Creative Suite, approach
+      every project with a unique perspective, utilizing design thinking principles
+      to create compelling visual narratives.
   experience:
-  - title: CUSTOMER SERVICE ASSOCIATE| SUTHERLAND GLOBAL SERVICES | JUNE 2024 –
-    company: SEPTEMBER 2024
+  - title: Meisterverse, Kochi, India
+    company: Worked with other artists, to performed retopology for a car project
+      ,optimizing the 3D
     start_date: YYYY
     end_date: present
     bullets:
-    - Worked as a Customer Service Associate for Amazon Chat Support under Sutherland,
-      achieving a 95% customer satisfaction rate by promptly resolving issues. Assisted
-      100+ customers daily while maintaining a positive and helpful attitude.
-    - Reduced average handling time by 15%, improving overall service efficiency.
-    - Increased customer retention by 10% through effective communication and problem
-      resolution.
-    - Developed and implemented customer service initiatives to minimize wait times.
-    - Utilized Amazon's internal tools and software to efficiently address customer
-      concerns.
-    - Consistently provided constructive feedback to management, contributing to product
-      and service improvements.
-    - PARTICIPANT - EMBEDDED SOFTWARE HACKATHON | HARDPOINT CONSULTING
-    - INTERNATIONAL | FEBRUARY 2024
-    - Developed web application that improved task management efficiency by 30%.
-    - Collaborated with team of four to design and implement innovative solutions
-      within 48-hour deadline.
-    - Created data visualization tool, leading to better decision-making and analysis.
-    - Received recognition for best user interface design among 20 competing teams.
-    - Improved system performance by 25% through optimized coding techniques.
-  - title: INTERN| PACE LAB| MAY 2023
-    company: Developed system that reduced data processing time by 20%.
+    - model for improved performance and detailing :- Thar Roxx , Skoda Kylaq gained
+      experience in texturing using adobe substance ,and used this knowledge for
+    - texturing 3d models
+    - 3D ARTIST 04/2024 to 05/2024
+  - title: Qmetron, Trivandrum, India
+    company: Worked with other artists, to gain knowledge in 3d visualization
     start_date: YYYY
     end_date: present
     bullets:
-    - 
-    - 
-    - Conducted over 50 chemical analyses weekly, ensuring accuracy and compliance
-      with industry standards.
-    - 
-    - Collaborated with team to establish new laboratory protocols, improving efficiency
-      by 15%.
-    - 
-    - Performed quality control tests on 100+ samples per month, maintaining 98% accuracy
-      rate.
-    - Increased efficiency of sample documentation by 25% through implementation of
-      digital tracking
-    -  system.
-  projects:
-  - name: Developed a website for official authorities to track and manage missing
-      person cases using
-    technologies: []
+    - 3D MODELER, ANIMATION 06/2022 to 06/2023
+    - SKAEBE LABS PRIVATE LIMITED, Thrissur, India
+    - Co-founder of the company
+  - title: JUNIOR SOFTWARE TRAINER (FREE LANCE) 09/2022 to 03/2023
+    company: Object Oriented Programming and website design Training on the Development
+      of
+    start_date: YYYY
+    end_date: present
     bullets:
-    - 'FindQ: Missing Person Finder  ReactJS.'
-    - Created a mobile app with React Native for the public to upload images and inform
-      officials 
+    - ASP.NET Framework based websites.
+  projects: []
   skills:
     frontend: []
     backend: []
     database: []
     cloud_tools: []
     other:
-    - Core Java & Object-Oriented Programming
-    - Algorithmic Problem-Solving
-    - Java Collections Framework & Multithreading
-    - Unit Testing (JUnit
-    - if familiar)
-    - Exception Handling & File I
-    - O
-    - Version Control with Git
-    - Basic Selenium Automation (Java integration)
-    - Strong Analytical Thinking
-    - Debugging & Code Optimization
+    - Animation and 3D modelling
+    - Graphics design
+    - ●
+    - ●
+    - Object Oriented Programming
+    - Adobe Creative suite
+    - ●
+    - ●
+    - Web Design
+    - Front End Coding
+    - ●
+    - ●
+    - Content Creation
+    - Figma
+    - ●
+    - ●
+    - Video Editing
+    - ●
   education:
-  - degree: BACHELOR OF ENGINEERING IN COMPUTER SCIENCE AND ENGINEERING| MAY 2024
-    institution: APJ ABDUL KALAM TECHNOLOGICAL UNIVERSITY – THRISSUR, KERALA
-    gpa: GPA – 7.3
-  - degree: KERALA HIGHER SECONDARY EXAMINATION BOARD | MAY 2019
-    institution: Institution
-  - degree: SACRED HEART SCHOOL – THRISSUR, KERALA
-    institution: PERCENTAGE – 83.33
+  - degree: Professional Diploma In, Multimedia Animation, 02/2025
+    institution: APJ Abdul Kalam Technological University, Thrissur, Kerala
+  - degree: Bachelor of Technology, Computer Science And Engineering, 07/2022
+    institution: Govt.Model Girls, Thrissur, Kerala
+  - degree: SECONDARY SCHOOL, COMPUTER SCIENCE , 03/2018
+    institution: 'Board: STATE Board'
   certifications:
-  - Workshop on Python for Machine Learning (05/2022)
-  - 'C for Everyone: Programming Fundamentals (Coursera, 08/2021)'
-  - Workshop on Metaverse, NFTs & Digital Realities (NIT, 02/2022)
-  - Workshop on Data Science (NIT, 02/2022)
-  - Python for Data Science (VAST, 11/2022)
-  - Reference
-  - Ms. Mithu Varghees
-  - Asst. Professor of CSE Department
-  - Vidya Academy of Science and Technology
-  - +91 94474 34862
-  - Page 2
-  - mithu816@vidyaacademy.ac.in
-  - Disclaimer
-  - I hereby declare that all the information given above is true and correct to the
-    best of my knowledge.
-  - Page 3
+  - Programming for everybody (getting started with python)
+  - IoT using raspberry Pi
+  - Python 3.4.3 Training
+  - Machine learning workshop
+  - OOP And C++ Certificate
+  - PERSONAL
+  - 'Title: 3D Artist & Developer'
+  - INFORMATION
   custom_sections: []
   visible_sections:
   - personal
   - summary
   - experience
-  - projects
   - skills
   - education
   - certifications

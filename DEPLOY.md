@@ -1,6 +1,14 @@
-# Deploy PPD API (free)
+# Deploy PPD API (free) — run from anywhere
 
-Use **Render’s free web service**. Your phone can call it from any network (Wi‑Fi or mobile data).
+Host the API in the cloud so your phone works on **any network**, with **no laptop** and **no tunnel**.
+
+| Method | Laptop required? | Works anywhere? |
+|--------|------------------|-----------------|
+| **Render (this guide)** | No | Yes |
+| Cloudflare quick tunnel | Yes (API + tunnel running) | Yes, while PC is on |
+| USB / same Wi‑Fi | Yes or same network | No |
+
+Use **Render’s free web service** ($0).
 
 ## Limits of the free tier (important)
 
@@ -12,21 +20,20 @@ Use **Render’s free web service**. Your phone can call it from any network (Wi
 | Disk | **Ephemeral** — uploads/resumes can reset when the service sleeps or redeploys |
 | Always-on | Not available on free; upgrade later if you need it |
 
-For day-to-day editing that must survive restarts, keep a local backup (export PDF / YAML). Free cloud is ideal for **demux + preview from the phone**.
+For data you care about, export PDF/YAML periodically. Free cloud is fine for editing and preview from the phone.
 
-## 1. Push this repo to GitHub
+## 1. Deploy on Render (~10 min)
 
-The API Docker files live in the `PPD` repo. Commit and push the branch that contains `Dockerfile`, `render.yaml`, and `ppd/http_server.py` (or merge to `main`).
+The PPD repo already includes `Dockerfile` and `render.yaml` on branch `feat/build-ocr-and-cleanup`.
 
-## 2. Deploy on Render
+1. Create a free account at [https://render.com](https://render.com) (GitHub login).
+2. **New → Blueprint** → connect **AnThoSeph/PPD** → pick branch `feat/build-ocr-and-cleanup` → apply `render.yaml`.
+   - Or **New → Web Service** → Docker → plan **Free** → same branch.
+3. Wait until status is **Live**.
+4. Open `https://YOUR-SERVICE.onrender.com/health` — expect `{"ok":true,...}`.
+5. In Render → your service → **Environment** → copy **`PPD_API_KEY`**.
 
-1. Create a free account at [https://render.com](https://render.com) (GitHub login is easiest).
-2. **New → Blueprint** → connect the **PPD** repo → select `render.yaml`.
-3. Or **New → Web Service** → connect repo → Runtime **Docker** → plan **Free**.
-4. Wait until the deploy is **Live**. Open `https://YOUR-SERVICE.onrender.com/health` — you want `{"ok":true,...}`.
-5. In Render → your service → **Environment**, copy the generated **`PPD_API_KEY`**.
-
-Your public base URL looks like:
+Your public base URL:
 
 ```text
 https://ppd-api-xxxx.onrender.com
@@ -34,7 +41,7 @@ https://ppd-api-xxxx.onrender.com
 
 (no trailing slash, no `:8765`)
 
-## 3. Point the Flutter app at it
+## 2. Point the Flutter app at it
 
 In the app → **API settings**:
 
@@ -46,9 +53,9 @@ In the app → **API settings**:
 
 Tap **Test connection** → **Save**.
 
-First open after the server slept: wait through the cold start, then test again.
+After the server has slept, the first request may be slow — wait and try again.
 
-## 4. Optional local check of the image
+## 3. Optional local Docker check
 
 ```bash
 cd PPD
@@ -57,16 +64,16 @@ docker run --rm -p 8765:8765 -e PPD_API_KEY=dev-key -e PPD_ALLOW_OPEN=0 ppd-api
 curl http://127.0.0.1:8765/health
 ```
 
-## Alternatives (also free tiers)
+## Other hosts (if Render doesn’t suit you)
 
 | Host | Notes |
 |------|--------|
-| **Render** (this guide) | Simplest Docker free web service |
-| Railway | Trial credit, not lasting free |
-| Fly.io | Free allowance; more CLI setup |
-| Cloudflare Tunnel | Free, but API still runs on your PC |
+| **Render** | Simplest; free tier with sleep |
+| Fly.io | Free allowance; CLI setup |
+| Railway | Trial credit only |
+| Oracle Cloud free VM | Always-on VPS; more manual setup |
 
 ## Security
 
-- Keep `PPD_ALLOW_OPEN=0` and always set `PPD_API_KEY` on a public URL.
-- Put the same key in the Flutter **API key** field (`X-API-Key` header).
+- Keep `PPD_ALLOW_OPEN=0` and set `PPD_API_KEY` on any public URL.
+- Use the same key in the Flutter **API key** field (`X-API-Key` header).

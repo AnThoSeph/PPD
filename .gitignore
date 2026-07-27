@@ -21,3 +21,4 @@ data/raw-extract.txt
 data/_typst_compile*.yaml
 data/jobs.json
 design-spec.json
+workspaces/

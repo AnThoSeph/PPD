@@ -31,6 +31,7 @@ COPY templates ./templates
 COPY data/config.yaml ./data/config.yaml
 
 RUN pip install --no-cache-dir -e .
+RUN pip install uvicorn
 
 RUN mkdir -p data/source output workspaces
 

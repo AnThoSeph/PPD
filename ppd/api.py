@@ -24,6 +24,7 @@ from ppd.preview_render import render_pdf_pages
 from ppd.forensics import write_design_spec
 from ppd.import_file import SUPPORTED_SUFFIXES, import_file
 from ppd.paths import app_root, ensure_runtime_dirs, seed_default_files
+from ppd.workspace import WorkspacePaths
 from ppd.resume_v2 import (
     StructuredResume,
     dump_structured,
@@ -43,15 +44,6 @@ from ppd.template_catalog import (
 )
 
 PROJECT_ROOT = app_root()
-DEFAULT_RESUME = PROJECT_ROOT / "data" / "resume.yaml"
-DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "resume.pdf"
-PREVIEW_PNG = PROJECT_ROOT / "output" / "preview.png"
-PREVIEW_PAGES_DIR = PROJECT_ROOT / "output" / "preview-pages"
-SOURCE_PREVIEW_PNG = PROJECT_ROOT / "output" / "source-preview.png"
-SOURCE_DIR = PROJECT_ROOT / "data" / "source"
-RAW_TXT = PROJECT_ROOT / "data" / "raw-extract.txt"
-DESIGN_SPEC = PROJECT_ROOT / "design-spec.json"
-JOBS_FILE = PROJECT_ROOT / "data" / "jobs.json"
 
 TEMPLATE_MAP = {
     "modern": "ats-standard",
@@ -64,16 +56,18 @@ TEMPLATE_MAP = {
 class PPDApi:
     """JS-callable API: pywebview.api.method()"""
 
-    def __init__(self) -> None:
+    def __init__(self, workspace_id: str = "default") -> None:
+        self._paths = WorkspacePaths.from_id(workspace_id)
+        self._paths.ensure_dirs()
         self._uploaded_path: Path | None = None
         self._template = "standard"
         self._preview_template_id = "ats-standard"
         self._window = None
-        ensure_reference_design(DESIGN_SPEC)
+        ensure_reference_design(self._paths.design_spec)
         self._get_source_path()
-        if self._uploaded_path and self._uploaded_path.suffix.lower() == ".pdf" and not DESIGN_SPEC.exists():
+        if self._uploaded_path and self._uploaded_path.suffix.lower() == ".pdf" and not self._paths.design_spec.exists():
             try:
-                enrich_design_from_pdf(self._uploaded_path, DESIGN_SPEC)
+                enrich_design_from_pdf(self._uploaded_path, self._paths.design_spec)
             except Exception:
                 pass
         self._preview_template_id = (
@@ -115,7 +109,7 @@ class PPDApi:
                 "ats_score": ats["score"],
                 "ats_label": ats["label"],
                 "skill_match": skills["percent"],
-                "sync_status": "SYNCED" if DEFAULT_RESUME.exists() else "UNSAVED",
+                "sync_status": "SYNCED" if self._paths.resume.exists() else "UNSAVED",
                 "assistant_message": assistant["message"],
                 "suggestions": assistant["suggestions"],
                 "preview_image": preview_image,
@@ -161,13 +155,65 @@ class PPDApi:
                     "ok": False,
                     "message": f"Unsupported file type. Use: {', '.join(sorted(SUPPORTED_SUFFIXES))}",
                 }
-            SOURCE_DIR.mkdir(parents=True, exist_ok=True)
-            dest = SOURCE_DIR / f"upload{source.suffix.lower()}"
+            self._paths.source_dir.mkdir(parents=True, exist_ok=True)
+            dest = self._paths.source_dir / f"upload{source.suffix.lower()}"
             shutil.copy2(source, dest)
             self._uploaded_path = dest
             return {"ok": True, "filename": source.name, "path": str(dest)}
         except Exception as exc:
             return {"ok": False, "message": f"Upload failed: {exc}"}
+
+    def upload_from_bytes(self, filename: str, data: bytes) -> dict[str, Any]:
+        """Save uploaded file bytes (REST/mobile — no file dialog)."""
+        try:
+            suffix = Path(filename).suffix.lower()
+            if suffix not in SUPPORTED_SUFFIXES:
+                return {
+                    "ok": False,
+                    "message": f"Unsupported file type. Use: {', '.join(sorted(SUPPORTED_SUFFIXES))}",
+                }
+            self._paths.source_dir.mkdir(parents=True, exist_ok=True)
+            dest = self._paths.source_dir / f"upload{suffix}"
+            dest.write_bytes(data)
+            self._uploaded_path = dest
+            return {"ok": True, "filename": filename, "path": str(dest)}
+        except Exception as exc:
+            return {"ok": False, "message": f"Upload failed: {exc}"}
+
+    def upload_and_process_bytes(self, filename: str, data: bytes) -> dict[str, Any]:
+        """Upload bytes then extract content in one step."""
+        picked = self.upload_from_bytes(filename, data)
+        if not picked.get("ok"):
+            return picked
+        return self._process_uploaded()
+
+    def export_pdf_bytes(self, content: str | None = None) -> dict[str, Any]:
+        """Build PDF and return bytes (REST/mobile — no Save As dialog)."""
+        try:
+            if not content or not str(content).strip():
+                if self._paths.resume.exists():
+                    content = self._paths.resume.read_text(encoding="utf-8")
+                else:
+                    return {"ok": False, "message": "No resume data to export."}
+            built = self.build_pdf(content, template_ui=None)
+            if not built.get("ok"):
+                return built
+            if not self._paths.output.exists():
+                return {"ok": False, "message": "PDF was not created."}
+            resume = self._validate_content(content)
+            safe_name = re.sub(r'[<>:"/\\|?*]+', "", resume.basics.name).strip().replace(" ", "_")
+            pdf_b64 = base64.b64encode(self._paths.output.read_bytes()).decode("ascii")
+            return {
+                "ok": True,
+                "message": "PDF exported.",
+                "filename": f"{safe_name or 'Resume'}_Resume.pdf",
+                "pdf_base64": pdf_b64,
+                "path": str(self._paths.output),
+                "preview_mode": built.get("preview_mode", "live"),
+                **{k: built[k] for k in ("preview_image", "preview_images", "preview_page_count") if k in built},
+            }
+        except Exception as exc:
+            return {"ok": False, "message": f"Export failed: {exc}"}
 
     def extract_content(self) -> dict[str, Any]:
         try:
@@ -180,16 +226,16 @@ class PPDApi:
     def _process_uploaded(self) -> dict[str, Any]:
         assert self._uploaded_path is not None
         source_preview = self._render_file_preview(self._uploaded_path)
-        resume = import_file(self._uploaded_path, DEFAULT_RESUME, RAW_TXT)
-        yaml_text = DEFAULT_RESUME.read_text(encoding="utf-8")
-        structured = load_structured(DEFAULT_RESUME)
+        resume = import_file(self._uploaded_path, self._paths.resume, self._paths.raw_txt)
+        yaml_text = self._paths.resume.read_text(encoding="utf-8")
+        structured = load_structured(self._paths.resume)
         if self._uploaded_path.suffix.lower() == ".pdf":
             try:
-                enrich_design_from_pdf(self._uploaded_path, DESIGN_SPEC)
+                enrich_design_from_pdf(self._uploaded_path, self._paths.design_spec)
                 self._preview_template_id = SOURCE_TEMPLATE_ID
             except Exception:
                 try:
-                    write_design_spec(self._uploaded_path, DESIGN_SPEC)
+                    write_design_spec(self._uploaded_path, self._paths.design_spec)
                 except Exception:
                     pass
 
@@ -234,7 +280,7 @@ class PPDApi:
             "suggestions": assistant["suggestions"],
             "stats": self._editor_stats(yaml_text),
             "structured": structured_to_dict(structured),
-            "raw_lines": len(RAW_TXT.read_text(encoding="utf-8").splitlines()) if RAW_TXT.exists() else 0,
+            "raw_lines": len(self._paths.raw_txt.read_text(encoding="utf-8").splitlines()) if self._paths.raw_txt.exists() else 0,
             "sync_status": "SYNCED",
             **payload,
         }
@@ -261,8 +307,8 @@ class PPDApi:
                 structured.visible_sections = data["resume"]["visible_sections"]
             if data.get("resume", data).get("visible_skill_categories"):
                 structured.visible_skill_categories = data["resume"]["visible_skill_categories"]
-            dump_structured(structured, DEFAULT_RESUME)
-            yaml_text = DEFAULT_RESUME.read_text(encoding="utf-8")
+            dump_structured(structured, self._paths.resume)
+            yaml_text = self._paths.resume.read_text(encoding="utf-8")
             legacy = structured_to_legacy(structured)
             ats = compute_ats_score(yaml_text)
             skills = compute_skill_match(yaml_text)
@@ -303,7 +349,7 @@ class PPDApi:
         try:
             structured = self._persist_resume(content)
             resume = structured_to_legacy(structured)
-            yaml_text = DEFAULT_RESUME.read_text(encoding="utf-8")
+            yaml_text = self._paths.resume.read_text(encoding="utf-8")
             ats = compute_ats_score(yaml_text)
             skills = compute_skill_match(yaml_text)
             return {
@@ -333,9 +379,9 @@ class PPDApi:
 
     def refresh_preview(self) -> dict[str, Any]:
         """Legacy alias — use update_preview with editor content instead."""
-        if not DEFAULT_RESUME.exists():
+        if not self._paths.resume.exists():
             return {"ok": False, "message": "No resume data yet. Upload a PDF or image first."}
-        content = DEFAULT_RESUME.read_text(encoding="utf-8")
+        content = self._paths.resume.read_text(encoding="utf-8")
         return self.update_preview(content)
 
     def update_preview(self, content: str) -> dict[str, Any]:
@@ -343,7 +389,7 @@ class PPDApi:
         try:
             structured = self._persist_resume(content)
             resume = structured_to_legacy(structured)
-            yaml_text = DEFAULT_RESUME.read_text(encoding="utf-8")
+            yaml_text = self._paths.resume.read_text(encoding="utf-8")
             self._rebuild_live_preview()
             ats = compute_ats_score(yaml_text)
             skills = compute_skill_match(yaml_text)
@@ -375,8 +421,8 @@ class PPDApi:
                 return {"ok": False, "message": "Window not ready. Restart the app."}
 
             if not content or not str(content).strip():
-                if DEFAULT_RESUME.exists():
-                    content = DEFAULT_RESUME.read_text(encoding="utf-8")
+                if self._paths.resume.exists():
+                    content = self._paths.resume.read_text(encoding="utf-8")
                 else:
                     return {"ok": False, "message": "No resume data to export. Upload or edit your resume first."}
 
@@ -400,7 +446,7 @@ class PPDApi:
                     "ok": True,
                     "cancelled": True,
                     "message": "Export cancelled — PDF is still at output/resume.pdf",
-                    "path": str(DEFAULT_OUTPUT),
+                    "path": str(self._paths.output),
                     **{k: built[k] for k in ("preview_image", "preview_images", "preview_page_count", "preview_mode") if k in built},
                 }
 
@@ -408,7 +454,7 @@ class PPDApi:
             if dest.suffix.lower() != ".pdf":
                 dest = dest.with_suffix(".pdf")
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(DEFAULT_OUTPUT, dest)
+            shutil.copy2(self._paths.output, dest)
 
             return {
                 "ok": True,
@@ -430,7 +476,7 @@ class PPDApi:
 
     def _persist_resume(self, content: str) -> StructuredResume:
         structured = self._structured_from_content(content)
-        dump_structured(structured, DEFAULT_RESUME)
+        dump_structured(structured, self._paths.resume)
         return structured
 
     def build_pdf(self, content: str, template_ui: str | None = None) -> dict[str, Any]:
@@ -441,10 +487,12 @@ class PPDApi:
 
             if template_ui:
                 template_key = TEMPLATE_MAP.get(template_ui, "resume-io-clone")
-                design_path = DESIGN_SPEC if uses_design_vars(template_key) and DESIGN_SPEC.exists() else None
+                design_path = self._paths.design_spec if uses_design_vars(template_key) and self._paths.design_spec.exists() else None
                 path = compile_pdf(
                     template_name=template_key,
-                    output_path=PROJECT_ROOT / "output" / "resume-template.pdf",
+                    output_path=self._paths.output_dir / "resume-template.pdf",
+                    resume_path=self._paths.resume,
+                    config_path=self._paths.config,
                     design_spec_path=design_path,
                 )
                 result: dict[str, Any] = {
@@ -459,10 +507,12 @@ class PPDApi:
                 return result
 
             template_key = self._import_template_name()
-            design_path = DESIGN_SPEC if uses_design_vars(template_key) and DESIGN_SPEC.exists() else None
+            design_path = self._paths.design_spec if uses_design_vars(template_key) and self._paths.design_spec.exists() else None
             path = compile_pdf(
                 template_name=template_key,
-                output_path=DEFAULT_OUTPUT,
+                output_path=self._paths.output,
+                resume_path=self._paths.resume,
+                config_path=self._paths.config,
                 design_spec_path=design_path,
             )
             result = {
@@ -492,7 +542,7 @@ class PPDApi:
             return {"ok": False, "message": "Upload a PDF first to use your original design."}
         self._preview_template_id = template_id
         try:
-            if DEFAULT_RESUME.exists():
+            if self._paths.resume.exists():
                 self._rebuild_live_preview()
             return {
                 "ok": True,
@@ -523,9 +573,9 @@ class PPDApi:
         if not self._uploaded_path or self._uploaded_path.suffix.lower() != ".pdf":
             return {"ok": False, "message": "Upload a PDF first."}
         try:
-            profile = enrich_design_from_pdf(self._uploaded_path, DESIGN_SPEC)
+            profile = enrich_design_from_pdf(self._uploaded_path, self._paths.design_spec)
             self._preview_template_id = SOURCE_TEMPLATE_ID
-            if DEFAULT_RESUME.exists():
+            if self._paths.resume.exists():
                 self._rebuild_live_preview()
             payload = self._preview_payload()
             return {
@@ -586,8 +636,8 @@ class PPDApi:
         return {"ok": True, "matches": matches, "count": len(matches)}
 
     def open_pdf(self) -> dict[str, Any]:
-        if DEFAULT_OUTPUT.exists():
-            os.startfile(DEFAULT_OUTPUT)
+        if self._paths.output.exists():
+            os.startfile(self._paths.output)
             return {"ok": True, "message": "Opened PDF."}
         return {"ok": False, "message": "No PDF yet — click Export PDF first."}
 
@@ -657,10 +707,10 @@ class PPDApi:
         return {"ok": True, "jobs": jobs, "stats": self._job_stats(jobs)}
 
     def _load_jobs(self) -> list[dict[str, Any]]:
-        if not JOBS_FILE.exists():
+        if not self._paths.jobs_file.exists():
             return []
         try:
-            raw = json.loads(JOBS_FILE.read_text(encoding="utf-8"))
+            raw = json.loads(self._paths.jobs_file.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             return []
         jobs = raw.get("jobs", []) if isinstance(raw, dict) else []
@@ -672,8 +722,8 @@ class PPDApi:
         return normalized
 
     def _save_jobs(self, jobs: list[dict[str, Any]]) -> None:
-        JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        JOBS_FILE.write_text(json.dumps({"jobs": jobs}, indent=2), encoding="utf-8")
+        self._paths.jobs_file.parent.mkdir(parents=True, exist_ok=True)
+        self._paths.jobs_file.write_text(json.dumps({"jobs": jobs}, indent=2), encoding="utf-8")
 
     def _normalize_job(self, job: dict[str, Any]) -> dict[str, Any]:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -735,8 +785,8 @@ class PPDApi:
         )
 
     def _read_yaml(self) -> str:
-        if DEFAULT_RESUME.exists():
-            return DEFAULT_RESUME.read_text(encoding="utf-8")
+        if self._paths.resume.exists():
+            return self._paths.resume.read_text(encoding="utf-8")
         return ""
 
     def _validate_content(self, content: str) -> Resume:
@@ -752,10 +802,10 @@ class PPDApi:
         return Resume.model_validate(raw)
 
     def _load_structured_safe(self):
-        if not DEFAULT_RESUME.exists():
+        if not self._paths.resume.exists():
             return None
         try:
-            return load_structured(DEFAULT_RESUME)
+            return load_structured(self._paths.resume)
         except Exception:
             legacy = self._safe_parse(self._read_yaml())
             return legacy_to_structured(legacy) if legacy else None
@@ -772,27 +822,29 @@ class PPDApi:
 
     def _has_upload_design(self) -> bool:
         return bool(
-            (DESIGN_SPEC.exists())
+            (self._paths.design_spec.exists())
             or (self._uploaded_path and self._uploaded_path.suffix.lower() == ".pdf")
         )
 
     def _template_catalog(self) -> list[dict[str, Any]]:
         return template_list(
             self._has_upload_design(),
-            source_label_from_spec(DESIGN_SPEC if DESIGN_SPEC.exists() else None),
+            source_label_from_spec(self._paths.design_spec if self._paths.design_spec.exists() else None),
         )
 
     def _import_template_name(self) -> str:
-        return resolve_typst_template(self._preview_template_id, DESIGN_SPEC)
+        return resolve_typst_template(self._preview_template_id, self._paths.design_spec)
 
     def _rebuild_live_preview(self, content: str | None = None) -> str | None:
         if content:
             self._validate_content(content)
         template_key = self._import_template_name()
-        design_path = DESIGN_SPEC if uses_design_vars(template_key) and DESIGN_SPEC.exists() else None
+        design_path = self._paths.design_spec if uses_design_vars(template_key) and self._paths.design_spec.exists() else None
         path = compile_pdf(
             template_name=template_key,
-            output_path=DEFAULT_OUTPUT,
+            output_path=self._paths.output,
+            resume_path=self._paths.resume,
+            config_path=self._paths.config,
             design_spec_path=design_path,
         )
         return self._render_preview(path)
@@ -803,18 +855,18 @@ class PPDApi:
 
     def _render_preview_pages(self, pdf_path: Path) -> list[str]:
         try:
-            urls = render_pdf_pages(pdf_path, PREVIEW_PAGES_DIR, scale=1.4)
+            urls = render_pdf_pages(pdf_path, self._paths.preview_pages_dir, scale=1.4)
             if urls:
-                PREVIEW_PNG.parent.mkdir(parents=True, exist_ok=True)
-                first = PREVIEW_PAGES_DIR / "page-1.png"
+                self._paths.preview_png.parent.mkdir(parents=True, exist_ok=True)
+                first = self._paths.preview_pages_dir / "page-1.png"
                 if first.exists():
-                    PREVIEW_PNG.write_bytes(first.read_bytes())
+                    self._paths.preview_png.write_bytes(first.read_bytes())
             return urls
         except Exception:
             return []
 
     def _preview_payload(self, pdf_path: Path | None = None) -> dict[str, Any]:
-        path = pdf_path or DEFAULT_OUTPUT
+        path = pdf_path or self._paths.output
         pages = self._render_preview_pages(path) if path.exists() else []
         return {
             "preview_image": pages[0] if pages else None,
@@ -823,13 +875,13 @@ class PPDApi:
         }
 
     def _best_preview(self, fast: bool = False) -> tuple[str | None, str]:
-        if PREVIEW_PAGES_DIR.exists():
-            pages = sorted(PREVIEW_PAGES_DIR.glob("page-*.png"))
+        if self._paths.preview_pages_dir.exists():
+            pages = sorted(self._paths.preview_pages_dir.glob("page-*.png"))
             if pages:
                 b64 = base64.b64encode(pages[0].read_bytes()).decode("ascii")
                 return f"data:image/png;base64,{b64}", "live"
-        if PREVIEW_PNG.exists() and DEFAULT_OUTPUT.exists():
-            b64 = base64.b64encode(PREVIEW_PNG.read_bytes()).decode("ascii")
+        if self._paths.preview_png.exists() and self._paths.output.exists():
+            b64 = base64.b64encode(self._paths.preview_png.read_bytes()).decode("ascii")
             return f"data:image/png;base64,{b64}", "live"
         if fast:
             source_preview = self._source_preview_data_url()
@@ -850,10 +902,10 @@ class PPDApi:
         return None, "none"
 
     def _load_cached_preview_pages(self) -> list[str]:
-        if not PREVIEW_PAGES_DIR.exists():
+        if not self._paths.preview_pages_dir.exists():
             return []
         urls: list[str] = []
-        for path in sorted(PREVIEW_PAGES_DIR.glob("page-*.png")):
+        for path in sorted(self._paths.preview_pages_dir.glob("page-*.png")):
             b64 = base64.b64encode(path.read_bytes()).decode("ascii")
             urls.append(f"data:image/png;base64,{b64}")
         return urls
@@ -861,9 +913,9 @@ class PPDApi:
     def _get_source_path(self) -> Path | None:
         if self._uploaded_path and self._uploaded_path.exists():
             return self._uploaded_path
-        if SOURCE_DIR.exists():
+        if self._paths.source_dir.exists():
             for ext in sorted(SUPPORTED_SUFFIXES):
-                candidate = SOURCE_DIR / f"upload{ext}"
+                candidate = self._paths.source_dir / f"upload{ext}"
                 if candidate.exists():
                     self._uploaded_path = candidate
                     return candidate
@@ -872,8 +924,8 @@ class PPDApi:
     def _cache_source_preview(self, data_url: str | None) -> None:
         if not data_url or not data_url.startswith("data:image/png;base64,"):
             return
-        SOURCE_PREVIEW_PNG.parent.mkdir(parents=True, exist_ok=True)
-        SOURCE_PREVIEW_PNG.write_bytes(base64.b64decode(data_url.split(",", 1)[1]))
+        self._paths.source_preview_png.parent.mkdir(parents=True, exist_ok=True)
+        self._paths.source_preview_png.write_bytes(base64.b64decode(data_url.split(",", 1)[1]))
 
     def _source_preview_data_url(self) -> str | None:
         source = self._get_source_path()
@@ -882,15 +934,15 @@ class PPDApi:
             if preview:
                 self._cache_source_preview(preview)
                 return preview
-        if SOURCE_PREVIEW_PNG.exists():
-            b64 = base64.b64encode(SOURCE_PREVIEW_PNG.read_bytes()).decode("ascii")
+        if self._paths.source_preview_png.exists():
+            b64 = base64.b64encode(self._paths.source_preview_png.read_bytes()).decode("ascii")
             return f"data:image/png;base64,{b64}"
         return None
 
     def _render_file_preview(self, file_path: Path) -> str | None:
         try:
             if file_path.suffix.lower() == ".pdf":
-                pages = render_pdf_pages(file_path, PREVIEW_PAGES_DIR, scale=1.2)
+                pages = render_pdf_pages(file_path, self._paths.preview_pages_dir, scale=1.2)
                 return pages[0] if pages else None
             from PIL import Image
             import io
@@ -907,9 +959,9 @@ class PPDApi:
         source_preview = self._source_preview_data_url()
         if source_preview:
             return source_preview
-        if PREVIEW_PNG.exists():
-            b64 = base64.b64encode(PREVIEW_PNG.read_bytes()).decode("ascii")
+        if self._paths.preview_png.exists():
+            b64 = base64.b64encode(self._paths.preview_png.read_bytes()).decode("ascii")
             return f"data:image/png;base64,{b64}"
-        if DEFAULT_OUTPUT.exists():
-            return self._render_preview(DEFAULT_OUTPUT)
+        if self._paths.output.exists():
+            return self._render_preview(self._paths.output)
         return None
