@@ -110,7 +110,7 @@ app.add_middleware(
 
 
 @app.get("/health")
-def health(api: PPDApi = Depends(get_api), _: None = Depends(_require_auth)) -> dict[str, Any]:
+def health(api: PPDApi = Depends(get_api)) -> dict[str, Any]:
     return api.ping()
 
 
