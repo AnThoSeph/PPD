@@ -195,90 +195,71 @@ def chat_response(yaml_text: str, user_message: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# LLM-based section management
+# LLM-based section management — YAML prompt for Gemini
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """You are a resume section management assistant. Modify the resume JSON based on the user's natural language request.
+_YAML_SYSTEM_PROMPT = """You are a resume YAML editor. Modify the resume YAML based on the user's request.
 
-The resume follows this JSON schema wrapped in {"resume": { ... }}:
-
-{
-  "personal": { "name": "...", "title": "...", "email": "...", "phone": "...", "location": "...", "github": "...", "linkedin": "...", "portfolio": "..." },
-  "summary": { "text": "..." },
-  "experience": [{ "title": "...", "company": "...", "location": "...", "employment_type": "...", "start_date": "...", "end_date": "...", "bullets": ["..."] }],
-  "projects": [{ "name": "...", "technologies": ["..."], "description": "...", "bullets": ["..."] }],
-  "skills": { "frontend": ["..."], "backend": ["..."], "database": ["..."], "cloud_tools": ["..."], "other": ["..."] },
-  "education": [{ "degree": "...", "field": "...", "institution": "...", "location": "...", "graduation": "...", "gpa": "..." }],
-  "certifications": ["..."],
-  "custom_sections": [{ "title": "...", "items": ["..."] }],
-  "visible_sections": ["personal", "summary", "experience", "projects", "skills", "education", "certifications", "custom_sections"],
-  "visible_skill_categories": ["frontend", "backend", "database", "cloud_tools", "other"]
-}
+The resume uses this exact YAML structure:
+resume:
+  personal:
+    name: string
+    title: string or null
+    email: string or null
+    phone: string or null
+    location: string or null
+    github: string or null
+    linkedin: string or null
+    portfolio: string or null
+  summary:
+    text: string or null
+  experience:
+    - title: string
+      company: string
+      location: string or null
+      employment_type: string or null
+      start_date: string
+      end_date: string
+      bullets: [string]
+  projects:
+    - name: string
+      technologies: [string]
+      description: string or null
+      bullets: [string]
+  skills:
+    frontend: [string]
+    backend: [string]
+    database: [string]
+    cloud_tools: [string]
+    other: [string]
+  education:
+    - degree: string
+      field: string or null
+      institution: string
+      location: string or null
+      graduation: string or null
+      gpa: string or null
+  certifications: [string]
+  custom_sections:
+    - title: string
+      items: [string]
+  visible_sections: [string]
+  visible_skill_categories: [string]
 
 RULES:
-1. Preserve ALL existing data. Only add, remove, or reorder sections and entries.
-2. The visible_sections array controls section DISPLAY ORDER. When adding a section, insert it at the correct position.
-3. When creating entries (project entries, experience entries, etc.), generate realistic placeholder content relevant to the person's field/title.
-4. For custom sections use: {"title": "...", "items": ["..."]}.
-5. Return the COMPLETE updated resume JSON wrapped in {"resume": {...}}.
-6. Generate 1-3 follow-up suggestions after the change (e.g. "Add bullet points to Projects").
-7. If the request cannot be understood or applied, set modified to false.
-
-Return ONLY valid JSON in this exact format:
-{"modified": true/false, "structured": {"resume": {...}}, "reply": "human-readable chat response", "assistant_message": "short technical summary", "suggestions": [{"id": "snake-case-id", "label": "Display text"}]}"""
+1. Preserve ALL existing data. Only modify what the user asks.
+2. visible_sections controls the display order of sections. Add new sections at the requested position.
+3. When adding entries (projects, experience, etc.), generate realistic placeholder content matching the person's title/field.
+4. To rename a built-in section (e.g. "Projects" → "Side Projects"), move its entries into custom_sections with the new title, remove the original section key, and update visible_sections accordingly.
+5. Return ONLY the complete updated YAML starting with 'resume:'. No explanations, no markdown."""
 
 
-def _call_openai(system: str, user: str, api_key: str, model: str) -> str | None:
-    data = json.dumps({
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "temperature": 0.1,
-        "response_format": {"type": "json_object"},
-    }).encode()
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            body = json.loads(resp.read())
-        return body["choices"][0]["message"]["content"]
-    except Exception:
-        return None
-
-
-def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str | None:
-    data = json.dumps({
-        "model": model,
-        "max_tokens": 8192,
-        "system": system,
-        "messages": [{"role": "user", "content": user}],
-    }).encode()
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            body = json.loads(resp.read())
-        return body["content"][0]["text"]
-    except Exception:
-        return None
-
+# ---------------------------------------------------------------------------
+# LLM API callers
+# ---------------------------------------------------------------------------
 
 def _call_gemini(system: str, user: str, api_key: str, model: str) -> str | None:
+    """Call Gemini with a combined system+user prompt, no JSON mode enforced."""
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     data = json.dumps({
         "contents": [
@@ -286,7 +267,6 @@ def _call_gemini(system: str, user: str, api_key: str, model: str) -> str | None
         ],
         "generationConfig": {
             "temperature": 0.1,
-            "response_mime_type": "application/json",
         },
     }).encode()
     req = urllib.request.Request(
@@ -302,22 +282,9 @@ def _call_gemini(system: str, user: str, api_key: str, model: str) -> str | None
         return None
 
 
-def _call_llm(system: str, user: str) -> str | None:
-    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-    openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o").strip()
-    anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514").strip()
-    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
-
-    if openai_key:
-        return _call_openai(system, user, openai_key, openai_model)
-    if anthropic_key:
-        return _call_anthropic(system, user, anthropic_key, anthropic_model)
-    if gemini_key:
-        return _call_gemini(system, user, gemini_key, gemini_model)
-    return None
-
+# ---------------------------------------------------------------------------
+# Response building helpers
+# ---------------------------------------------------------------------------
 
 def _parse_resume(yaml_text: str) -> StructuredResume:
     try:
@@ -333,6 +300,168 @@ def _parse_resume(yaml_text: str) -> StructuredResume:
     return structured
 
 
+def _extract_yaml_from_llm_output(text: str) -> str | None:
+    """Extract clean YAML from LLM output, stripping code fences and preamble."""
+    m = re.search(r'```(?:yaml)?\s*\n(.*?)\n```', text, re.DOTALL)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r'^(resume:.*)$', text, re.DOTALL | re.MULTILINE)
+    if m:
+        return m.group(1).strip()
+    if text.strip().startswith("resume:"):
+        return text.strip()
+    return None
+
+
+def _generate_reply_and_suggestions(
+    old: StructuredResume, new: StructuredResume, user_message: str
+) -> tuple[str, str, list[dict[str, str]]]:
+    """Diff old vs new to build a human reply, assistant_message, and suggestions."""
+    parts = []
+    suggestions: list[dict[str, str]] = []
+
+    # Projects
+    if new.projects and not old.projects:
+        parts.append(f"Added Projects section with {len(new.projects)} entries")
+        suggestions.append({"id": "add-project-bullets", "label": "Add bullet points to Projects"})
+    elif len(new.projects) > len(old.projects):
+        added = len(new.projects) - len(old.projects)
+        parts.append(f"Added {added} project(s)")
+        suggestions.append({"id": "add-project-bullets", "label": "Add bullet points to Projects"})
+
+    # Custom sections
+    old_titles = {cs.title.lower() for cs in old.custom_sections}
+    for cs in new.custom_sections:
+        if cs.title.lower() not in old_titles:
+            parts.append(f"Added {cs.title} section")
+            sid = cs.title.lower().replace(" ", "-")
+            suggestions.append({"id": f"add-items-to-{sid}", "label": f"Add items to {cs.title}"})
+
+    # Summary
+    if new.summary.text and not old.summary.text:
+        parts.append("Added professional summary")
+        suggestions.append({"id": "refine-summary", "label": "Refine your professional summary"})
+
+    # Education
+    if new.education and not old.education:
+        parts.append("Added education entry")
+        suggestions.append({"id": "add-education-details", "label": "Add details to Education"})
+
+    # Certifications
+    if new.certifications and not old.certifications:
+        parts.append("Added certifications")
+
+    # Experience
+    if new.experience and not old.experience:
+        parts.append("Added experience entries")
+
+    # Skills
+    old_has_skills = any(getattr(old.skills, cat) for cat in ("frontend", "backend", "database", "cloud_tools", "other"))
+    new_has_skills = any(getattr(new.skills, cat) for cat in ("frontend", "backend", "database", "cloud_tools", "other"))
+    if new_has_skills and not old_has_skills:
+        parts.append("Added skills section")
+        suggestions.append({"id": "organize-skills", "label": "Organize skills by category"})
+
+    # Reorder
+    if new.visible_sections != old.visible_sections and not parts:
+        parts.append("Reordered sections")
+        suggestions.append({"id": "refine-content", "label": "Refine section content"})
+
+    # Rename detection: old section missing, matching custom section present
+    if not parts:
+        old_secs = set(old.visible_sections)
+        new_secs = set(new.visible_sections)
+        removed = old_secs - new_secs
+        added_custom = {cs.title.lower() for cs in new.custom_sections} - {cs.title.lower() for cs in old.custom_sections}
+        if removed and added_custom:
+            parts.append(f"Renamed {', '.join(sorted(removed))} section")
+            suggestions.append({"id": "refine-content", "label": "Refine renamed section content"})
+
+    if not parts:
+        parts.append("Applied changes")
+        suggestions = [
+            {"id": "refine-content", "label": "Refine any section content"},
+            {"id": "ats-optimize", "label": "Optimize for ATS scoring"},
+        ]
+
+    reply = ". ".join(parts) + "."
+    assistant_message = parts[0]
+    return reply, assistant_message, suggestions[:3]
+
+
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
+
+def chat_response_structured(yaml_text: str, user_message: str) -> dict[str, Any]:
+    """Parse YAML → Gemini → return structured response.
+
+    Priority:
+    1. Gemini with YAML prompt
+    2. Rule-based fallback for common patterns
+    3. Keyword-based chat fallback
+    """
+    structured = _parse_resume(yaml_text)
+    current_yaml = yaml.dump(
+        ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
+        sort_keys=False, allow_unicode=True, default_flow_style=False,
+    )
+
+    # --- 1. Gemini with YAML prompt ---
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if gemini_key:
+        gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
+        user_prompt = (
+            f"The user requested: \"{user_message}\"\n\n"
+            f"Here is the current resume YAML:\n{current_yaml}\n\n"
+            f"Modify the resume YAML to fulfill the request. "
+            f"Return ONLY the complete updated YAML starting with 'resume:'."
+        )
+        llm_raw = _call_gemini(_YAML_SYSTEM_PROMPT, user_prompt, gemini_key, gemini_model)
+        if llm_raw:
+            yaml_str = _extract_yaml_from_llm_output(llm_raw)
+            if yaml_str:
+                try:
+                    parsed = yaml.safe_load(yaml_str)
+                    if isinstance(parsed, dict):
+                        validated = structured_from_dict(parsed)
+                        updated_yaml = yaml.dump(
+                            ResumeDocument(resume=validated).model_dump(mode="json", exclude_none=True),
+                            sort_keys=False, allow_unicode=True, default_flow_style=False,
+                        )
+                        reply, asst_msg, suggestions = _generate_reply_and_suggestions(
+                            structured, validated, user_message
+                        )
+                        return {
+                            "reply": reply,
+                            "structured": structured_to_dict(validated),
+                            "yaml": updated_yaml,
+                            "suggestions": suggestions,
+                            "assistant_message": asst_msg,
+                        }
+                except Exception:
+                    pass
+
+    # --- 2. Rule-based fallback ---
+    rule_result = _rule_based_structured_chat(structured, yaml_text, user_message)
+    if rule_result:
+        return rule_result
+
+    # --- 3. Keyword-based chat fallback ---
+    reply = chat_response(yaml_text, user_message)
+    return {
+        "reply": reply,
+        "structured": structured_to_dict(structured),
+        "yaml": yaml_text,
+        "suggestions": [],
+        "assistant_message": "",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Rule-based fallback (used when no LLM is available)
+# ---------------------------------------------------------------------------
+
 def _rule_based_structured_chat(
     structured: StructuredResume,
     yaml_text: str,
@@ -344,7 +473,6 @@ def _rule_based_structured_chat(
     """
     msg = user_message.lower().strip()
 
-    # --- Detect section names in the message ---
     section_names = {
         "summary": "summary",
         "experience": "experience",
@@ -362,10 +490,10 @@ def _rule_based_structured_chat(
         "certificates": "certifications",
     }
 
-    # --- Determine intent ---
     has_add = any(w in msg for w in ("add ", "create ", "insert "))
     has_remove = any(w in msg for w in ("remove ", "delete ", "remove the "))
     has_move = any(w in msg for w in ("move ", "reorder ", "re-order "))
+    has_rename = "rename" in msg
     has_before = "before" in msg
     has_after = "after" in msg
     has_under = any(w in msg for w in (" under ", " below "))
@@ -376,6 +504,11 @@ def _rule_based_structured_chat(
             position = _detect_position_from_ref(msg, ref_sec or "summary")
             count = _detect_count(msg)
             return _apply_add_section(structured, yaml_text, target, position, count, user_message)
+
+    if has_rename:
+        result = _handle_rename(structured, yaml_text, msg, user_message)
+        if result:
+            return result
 
     if has_move and (has_before or has_after):
         found = []
@@ -403,21 +536,97 @@ def _rule_based_structured_chat(
     return None
 
 
+def _handle_rename(
+    structured: StructuredResume,
+    yaml_text: str,
+    msg: str,
+    user_message: str,
+) -> dict[str, Any] | None:
+    """Rename a section by moving its data into custom_sections."""
+    words = msg.split()
+    source_sec = None
+    new_title = None
+
+    # Find "rename <src> to <title>" pattern
+    for i, w in enumerate(words):
+        if w == "rename" and i + 3 < len(words):
+            for kw, sec in (("summary", "summary"), ("experience", "experience"),
+                            ("projects", "projects"), ("skills", "skills"),
+                            ("education", "education"), ("certifications", "certifications")):
+                if kw in words[i:i+3]:
+                    source_sec = sec
+                    break
+            for j in range(i + 1, len(words)):
+                if words[j] == "to" and j + 1 < len(words):
+                    new_title = " ".join(words[j+1:]).strip(" ,.").title()
+                    break
+            break
+
+    if not source_sec or not new_title:
+        return None
+
+    if any(cs.title.lower() == new_title.lower() for cs in structured.custom_sections):
+        return {
+            "reply": f"A section named '{new_title}' already exists.",
+            "structured": structured_to_dict(structured),
+            "yaml": yaml_text,
+            "suggestions": [{"id": "choose-different-name", "label": "Choose a different name"}],
+            "assistant_message": "Rename failed — duplicate name",
+        }
+
+    items = []
+    if source_sec == "projects" and structured.projects:
+        for p in structured.projects:
+            items.append(f"{p.name}: {'; '.join(p.bullets) if p.bullets else p.description or ''}")
+        structured.projects = []
+    elif source_sec == "experience" and structured.experience:
+        for e in structured.experience:
+            items.append(f"{e.title} at {e.company}: {'; '.join(e.bullets)}")
+        structured.experience = []
+    elif source_sec == "education" and structured.education:
+        for edu in structured.education:
+            items.append(f"{edu.degree} in {edu.field or ''} at {edu.institution}")
+        structured.education = []
+    elif source_sec == "certifications" and structured.certifications:
+        items = structured.certifications[:]
+        structured.certifications = []
+    elif source_sec == "summary" and structured.summary.text:
+        items = [structured.summary.text]
+        structured.summary.text = None
+    elif source_sec == "skills":
+        for cat in ("frontend", "backend", "database", "cloud_tools", "other"):
+            items.extend(getattr(structured.skills, cat))
+            setattr(structured.skills, cat, [])
+    else:
+        return None
+
+    structured.custom_sections.append(CustomSection(title=new_title, items=items))
+    if source_sec in structured.visible_sections:
+        structured.visible_sections.remove(source_sec)
+    if "custom_sections" not in structured.visible_sections:
+        structured.visible_sections.append("custom_sections")
+
+    updated_yaml = yaml.dump(
+        ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
+        sort_keys=False, allow_unicode=True, default_flow_style=False,
+    )
+    reply = f"Renamed {source_sec.title()} to {new_title}"
+    return {
+        "reply": reply + ".",
+        "structured": structured_to_dict(structured),
+        "yaml": updated_yaml,
+        "suggestions": [{"id": "refine-content", "label": f"Refine {new_title} content"}],
+        "assistant_message": reply,
+    }
+
+
 def _detect_add_section_and_reference(
     msg: str, section_names: dict[str, str], user_message: str = ""
 ) -> tuple[str | None, str | None]:
-    """Detect which section to add and which reference section is mentioned.
-
-    Returns (target_section, reference_section).
-    1. First checks if a word between 'add/create' and 'section' is a known section
-       or should be treated as a custom section.
-    2. Then looks for reference sections (after/before/under/below a known section).
-    """
     words = msg.split()
     target = None
     ref = None
 
-    # Step 1: Find the word between add/create/insert and section
     add_keywords = {"add", "create", "insert"}
     stop_words = {"a", "an", "the", "new"}
     section_word = None
@@ -455,7 +664,17 @@ def _detect_add_section_and_reference(
                     target = "custom_sections"
                     break
 
-    # Step 2: Find reference section (after/before/under/below a known section)
+    # Fallback: if no "section" keyword but a known section name follows "add"
+    if target is None and add_idx is not None:
+        for k in range(add_idx + 1, min(add_idx + 4, len(words))):
+            word = words[k].strip(" ,.:;!?,").lower()
+            for kw, sec in section_names.items():
+                if word == kw or word in kw or kw.startswith(word):
+                    target = sec
+                    break
+            if target:
+                break
+
     pos_keywords = {"after", "below", "under", "before"}
     for i, w in enumerate(words):
         raw_w = w.strip(" ,.:;!?,")
@@ -471,7 +690,6 @@ def _detect_add_section_and_reference(
 
 
 def _detect_reference_section(msg: str, section_names: dict[str, str], exclude: str | None = None) -> str | None:
-    """Detect a reference section (after X, before Y), optionally excluding one."""
     for keyword, section in section_names.items():
         if keyword in msg and section != exclude:
             return section
@@ -509,7 +727,6 @@ def _apply_add_section(
     count: int,
     user_message: str,
 ) -> dict[str, Any]:
-    """Add a section to the resume."""
     modified = False
     reply_parts = []
     suggestions = []
@@ -593,7 +810,6 @@ def _apply_add_section(
     if not modified:
         return None
 
-    # Ensure visible_sections follows default ordering
     default_order = [
         "personal", "summary", "experience", "projects",
         "skills", "education", "certifications", "custom_sections",
@@ -602,9 +818,7 @@ def _apply_add_section(
 
     updated_yaml = yaml.dump(
         ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
-        sort_keys=False,
-        allow_unicode=True,
-        default_flow_style=False,
+        sort_keys=False, allow_unicode=True, default_flow_style=False,
     )
     if modified and not suggestions:
         if structured.projects:
@@ -623,11 +837,6 @@ def _apply_add_section(
 
 
 def _extract_custom_title(user_message: str, msg_lower: str | None = None) -> str:
-    """Extract a custom section title from user message.
-
-    Tries known patterns first, then extracts unknown words that appear
-    between 'add/create' and 'section', or immediately after 'section'.
-    """
     m = (msg_lower or user_message.lower())
     known_words = ("languages", "publications", "awards", "interests", "volunteer", "hobbies", "references", "surname")
     for word in known_words:
@@ -635,20 +844,17 @@ def _extract_custom_title(user_message: str, msg_lower: str | None = None) -> st
             return word.title()
 
     words = m.split()
-    # Try: "add <title> section" or "add new section, <title>" or "create <title> section"
     for i, w in enumerate(words):
         w_clean = w.strip(" ,.:;!?")
         if w_clean in ("add", "create", "insert", "new"):
             for j in range(i + 1, min(i + 5, len(words))):
                 wj_clean = words[j].strip(" ,.:;!?")
                 if wj_clean in ("section", "sections"):
-                    # Words between add/create and section
                     if j > i + 1:
                         between = [words[k].strip(" ,.:;!?") for k in range(i + 1, j)]
                         meaningful = [b for b in between if b not in ("a", "an", "the", "new")]
                         if meaningful:
                             return " ".join(meaningful).title()
-                    # Words after section, (comma-separated)
                     for k in range(j + 1, min(j + 4, len(words))):
                         wk_clean = words[k].strip(" ,.:;!?")
                         if wk_clean and wk_clean not in (
@@ -658,7 +864,6 @@ def _extract_custom_title(user_message: str, msg_lower: str | None = None) -> st
                         if wk_clean in ("under", "below", "after", "before"):
                             break
                     break
-    # Try: "section <title>" or "section called <title>"
     for i, w in enumerate(words):
         if w.strip(" ,.:;!?") == "section" and i + 1 < len(words):
             cand = words[i + 1].strip(" ,.:;!?")
@@ -675,7 +880,6 @@ def _apply_reorder(
     is_before: bool,
     user_message: str,
 ) -> dict[str, Any] | None:
-    """Reorder visible_sections."""
     current = list(structured.visible_sections)
     if subject not in current or reference not in current:
         return None
@@ -689,9 +893,7 @@ def _apply_reorder(
     reply = f"Moved {subject.title()} {'before' if is_before else 'after'} {reference.title()}"
     updated_yaml = yaml.dump(
         ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
-        sort_keys=False,
-        allow_unicode=True,
-        default_flow_style=False,
+        sort_keys=False, allow_unicode=True, default_flow_style=False,
     )
     suggestions = [
         {"id": "reorder-sections", "label": "Reorder sections further"},
@@ -702,56 +904,4 @@ def _apply_reorder(
         "yaml": updated_yaml,
         "suggestions": suggestions,
         "assistant_message": reply,
-    }
-
-
-def chat_response_structured(yaml_text: str, user_message: str) -> dict[str, Any]:
-    """Parse YAML → LLM section management → return structured response.
-
-    Returns a dict with keys: reply, structured, yaml, suggestions, assistant_message.
-    Falls back to rule-based patterns when no LLM is available.
-    Falls back to keyword-based chat when no section intent is detected.
-    """
-    structured = _parse_resume(yaml_text)
-
-    # --- Try LLM first ---
-    structured_json = json.dumps(structured_to_dict(structured), indent=2)
-    user_prompt = f"Current resume:\n{structured_json}\n\nUser request:\n{user_message}"
-    llm_raw = _call_llm(_SYSTEM_PROMPT, user_prompt)
-
-    if llm_raw:
-        try:
-            parsed = json.loads(llm_raw)
-            if parsed.get("modified") and "structured" in parsed:
-                llm_structured = parsed["structured"]
-                validated = structured_from_dict(llm_structured)
-                updated_yaml = yaml.dump(
-                    ResumeDocument(resume=validated).model_dump(mode="json", exclude_none=True),
-                    sort_keys=False,
-                    allow_unicode=True,
-                    default_flow_style=False,
-                )
-                return {
-                    "reply": parsed.get("reply", "Done."),
-                    "structured": structured_to_dict(validated),
-                    "yaml": updated_yaml,
-                    "suggestions": parsed.get("suggestions", []),
-                    "assistant_message": parsed.get("assistant_message", ""),
-                }
-        except (json.JSONDecodeError, Exception):
-            pass
-
-    # --- Fallback: rule-based section management ---
-    rule_result = _rule_based_structured_chat(structured, yaml_text, user_message)
-    if rule_result:
-        return rule_result
-
-    # --- Fallback: keyword-based chat reply ---
-    reply = chat_response(yaml_text, user_message)
-    return {
-        "reply": reply,
-        "structured": structured_to_dict(structured),
-        "yaml": yaml_text,
-        "suggestions": [],
-        "assistant_message": "",
     }
