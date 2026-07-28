@@ -278,16 +278,44 @@ def _call_anthropic(system: str, user: str, api_key: str, model: str) -> str | N
         return None
 
 
+def _call_gemini(system: str, user: str, api_key: str, model: str) -> str | None:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    data = json.dumps({
+        "contents": [
+            {"role": "user", "parts": [{"text": f"{system}\n\n{user}"}]},
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "response_mime_type": "application/json",
+        },
+    }).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            body = json.loads(resp.read())
+        return body["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception:
+        return None
+
+
 def _call_llm(system: str, user: str) -> str | None:
     openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o").strip()
     anthropic_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514").strip()
+    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash").strip()
 
     if openai_key:
         return _call_openai(system, user, openai_key, openai_model)
     if anthropic_key:
         return _call_anthropic(system, user, anthropic_key, anthropic_model)
+    if gemini_key:
+        return _call_gemini(system, user, gemini_key, gemini_model)
     return None
 
 
@@ -340,9 +368,10 @@ def _rule_based_structured_chat(
     has_move = any(w in msg for w in ("move ", "reorder ", "re-order "))
     has_before = "before" in msg
     has_after = "after" in msg
+    has_under = any(w in msg for w in (" under ", " below "))
 
     if has_add:
-        target, ref_sec = _detect_add_section_and_reference(msg, section_names)
+        target, ref_sec = _detect_add_section_and_reference(msg, section_names, user_message)
         if target:
             position = _detect_position_from_ref(msg, ref_sec or "summary")
             count = _detect_count(msg)
@@ -375,36 +404,68 @@ def _rule_based_structured_chat(
 
 
 def _detect_add_section_and_reference(
-    msg: str, section_names: dict[str, str]
+    msg: str, section_names: dict[str, str], user_message: str = ""
 ) -> tuple[str | None, str | None]:
     """Detect which section to add and which reference section is mentioned.
 
     Returns (target_section, reference_section).
-    Uses word position in the message to distinguish target from reference.
+    1. First checks if a word between 'add/create' and 'section' is a known section
+       or should be treated as a custom section.
+    2. Then looks for reference sections (after/before/under/below a known section).
     """
-    custom_indicators = ["languages", "publications", "awards", "interests", "volunteer"]
-    found = []
-    for kw, sec in section_names.items():
-        idx = msg.find(kw)
-        if idx != -1:
-            found.append((idx, kw, sec))
-    found.sort()
-
+    words = msg.split()
     target = None
     ref = None
 
-    for idx, kw, sec in found:
-        if target is None:
-            target = sec
-        elif sec != target:
-            ref = sec
-            break
+    # Step 1: Find the word between add/create/insert and section
+    add_keywords = {"add", "create", "insert"}
+    stop_words = {"a", "an", "the", "new"}
+    section_word = None
+    add_idx = None
+    for i, w in enumerate(words):
+        raw = w.strip(" ,.:;!?,")
+        if raw in add_keywords:
+            add_idx = i
+            for j in range(i + 1, min(i + 5, len(words))):
+                raw_j = words[j].strip(" ,.:;!?,")
+                if raw_j in ("section", "sections"):
+                    if j > i + 1:
+                        between = [words[k].strip(" ,.:;!?,") for k in range(i + 1, j)]
+                        meaningful = [w for w in between if w.lower() not in stop_words]
+                        candidate = (meaningful[0] if meaningful else between[0]).lower()
+                        section_word = candidate
+                    break
 
-    # Detect custom sections via title-specific keywords
-    for indicator in custom_indicators:
-        if indicator in msg:
+    if section_word:
+        for kw, sec in section_names.items():
+            if section_word in kw or kw.startswith(section_word) or section_word.startswith(kw):
+                target = sec
+                break
+        known_custom = {"languages", "publications", "awards", "interests",
+                        "volunteer", "hobbies", "references", "surname"}
+        if target is None and section_word in known_custom:
             target = "custom_sections"
-            break
+        if target is None and section_word not in stop_words:
+            target = "custom_sections"
+        if target is None and section_word in stop_words and add_idx is not None:
+            for k in range(add_idx + 1, min(add_idx + 5, len(words))):
+                if words[k].strip(" ,.:;!?,") not in stop_words:
+                    candidate = words[k].strip(" ,.:;!?,").lower()
+                    section_word = candidate
+                    target = "custom_sections"
+                    break
+
+    # Step 2: Find reference section (after/before/under/below a known section)
+    pos_keywords = {"after", "below", "under", "before"}
+    for i, w in enumerate(words):
+        raw_w = w.strip(" ,.:;!?,")
+        if raw_w in pos_keywords and i + 1 < len(words):
+            candidate = words[i + 1].strip(" ,.:;!?,").lower()
+            for kw, sec in section_names.items():
+                if candidate in kw or candidate.startswith(kw) or kw.startswith(candidate):
+                    if sec != target:
+                        ref = sec
+                    break
 
     return target, ref
 
@@ -418,13 +479,15 @@ def _detect_reference_section(msg: str, section_names: dict[str, str], exclude: 
 
 
 def _detect_position_from_ref(msg: str, ref_sec: str | None) -> str | None:
-    if ref_sec and "after" in msg:
+    has_after = "after" in msg or " below " in msg
+    has_before = "before" in msg or " under " in msg
+    if ref_sec and has_after:
         return f"after_{ref_sec}"
-    if ref_sec and "before" in msg:
+    if ref_sec and has_before:
         return f"before_{ref_sec}"
-    if "after" in msg:
+    if has_after:
         return "after_summary"
-    if "before" in msg:
+    if has_before:
         return "before_personal"
     return "end"
 
@@ -559,11 +622,48 @@ def _apply_add_section(
     }
 
 
-def _extract_custom_title(user_message: str) -> str:
-    """Extract a custom section title from user message (e.g. 'Languages', 'Publications')."""
-    for word in ("languages", "publications", "awards", "interests", "volunteer"):
-        if word in user_message.lower():
+def _extract_custom_title(user_message: str, msg_lower: str | None = None) -> str:
+    """Extract a custom section title from user message.
+
+    Tries known patterns first, then extracts unknown words that appear
+    between 'add/create' and 'section', or immediately after 'section'.
+    """
+    m = (msg_lower or user_message.lower())
+    known_words = ("languages", "publications", "awards", "interests", "volunteer", "hobbies", "references", "surname")
+    for word in known_words:
+        if word in m:
             return word.title()
+
+    words = m.split()
+    # Try: "add <title> section" or "add new section, <title>" or "create <title> section"
+    for i, w in enumerate(words):
+        w_clean = w.strip(" ,.:;!?")
+        if w_clean in ("add", "create", "insert", "new"):
+            for j in range(i + 1, min(i + 5, len(words))):
+                wj_clean = words[j].strip(" ,.:;!?")
+                if wj_clean in ("section", "sections"):
+                    # Words between add/create and section
+                    if j > i + 1:
+                        between = [words[k].strip(" ,.:;!?") for k in range(i + 1, j)]
+                        meaningful = [b for b in between if b not in ("a", "an", "the", "new")]
+                        if meaningful:
+                            return " ".join(meaningful).title()
+                    # Words after section, (comma-separated)
+                    for k in range(j + 1, min(j + 4, len(words))):
+                        wk_clean = words[k].strip(" ,.:;!?")
+                        if wk_clean and wk_clean not in (
+                            "under", "below", "after", "before", "with", "and", "or", "the", "a", "an"
+                        ):
+                            return wk_clean.title()
+                        if wk_clean in ("under", "below", "after", "before"):
+                            break
+                    break
+    # Try: "section <title>" or "section called <title>"
+    for i, w in enumerate(words):
+        if w.strip(" ,.:;!?") == "section" and i + 1 < len(words):
+            cand = words[i + 1].strip(" ,.:;!?")
+            if cand and cand not in ("with", "called", "named", "below", "under", "after", "before", "and", "or", "the"):
+                return cand.title()
     return "Custom"
 
 
