@@ -37,7 +37,9 @@ from ppd.resume_v2 import (
 from ppd.schema import Resume
 from ppd.template_catalog import (
     SOURCE_TEMPLATE_ID,
+    USER_TEMPLATE_PREFIX,
     resolve_typst_template,
+    scan_custom_templates,
     source_label_from_spec,
     template_list,
     uses_design_vars,
@@ -494,6 +496,7 @@ class PPDApi:
                     resume_path=self._paths.resume,
                     config_path=self._paths.config,
                     design_spec_path=design_path,
+                    custom_templates_dir=self._paths.custom_templates_dir,
                 )
                 result: dict[str, Any] = {
                     "ok": True,
@@ -514,6 +517,7 @@ class PPDApi:
                 resume_path=self._paths.resume,
                 config_path=self._paths.config,
                 design_spec_path=design_path,
+                custom_templates_dir=self._paths.custom_templates_dir,
             )
             result = {
                 "ok": True,
@@ -568,6 +572,44 @@ class PPDApi:
             return {"ok": False, "message": f"Unknown template: {template_ui}"}
         self._template = template_ui
         return {"ok": True, "template": template_ui}
+
+    def upload_template(self, filename: str, data: bytes) -> dict[str, Any]:
+        """Save an uploaded .typ file as a custom template and return updated template list."""
+        try:
+            if not filename.lower().endswith(".typ"):
+                return {"ok": False, "message": "Only .typ files are accepted as templates."}
+            safe_name = re.sub(r"[^a-zA-Z0-9._-]", "", Path(filename).stem)[:64]
+            if not safe_name:
+                return {"ok": False, "message": "Invalid template filename."}
+            dest = self._paths.custom_templates_dir / f"{safe_name}.typ"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(data)
+            return {
+                "ok": True,
+                "template_id": f"{USER_TEMPLATE_PREFIX}{safe_name}",
+                "templates": self._template_catalog(),
+            }
+        except Exception as exc:
+            return {"ok": False, "message": f"Template upload failed: {exc}"}
+
+    def pick_and_upload_template(self) -> dict[str, Any]:
+        """Desktop file dialog to pick a .typ template file and register it."""
+        try:
+            if not self._window:
+                return {"ok": False, "message": "Window not ready. Restart the app."}
+            import webview
+
+            result = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                allow_multiple=False,
+                file_types=("Typst templates (*.typ)", "All files (*.*)"),
+            )
+            if not result:
+                return {"ok": False, "message": "No file selected.", "cancelled": True}
+            source = Path(result[0] if isinstance(result, (list, tuple)) else result)
+            return self.upload_template(source.name, source.read_bytes())
+        except Exception as exc:
+            return {"ok": False, "message": f"Template upload failed: {exc}"}
 
     def analyze_design(self) -> dict[str, Any]:
         if not self._uploaded_path or self._uploaded_path.suffix.lower() != ".pdf":
@@ -831,6 +873,7 @@ class PPDApi:
         return template_list(
             self._has_upload_design(),
             source_label_from_spec(self._paths.design_spec if self._paths.design_spec.exists() else None),
+            custom_templates_dir=self._paths.custom_templates_dir,
         )
 
     def _import_template_name(self) -> str:
@@ -847,6 +890,7 @@ class PPDApi:
             resume_path=self._paths.resume,
             config_path=self._paths.config,
             design_spec_path=design_path,
+            custom_templates_dir=self._paths.custom_templates_dir,
         )
         return self._render_preview(path)
 

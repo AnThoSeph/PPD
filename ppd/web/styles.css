@@ -217,6 +217,49 @@ input, textarea { font-family: inherit; font-size: inherit; }
 .preview-placeholder { width: 280px; aspect-ratio: 1/1.414; background: white; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .preview-toolbar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); border-radius: 999px; padding: 8px 24px; display: flex; gap: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
 
+/* Fullscreen toggle button in preview-box */
+.fs-toggle {
+  position: absolute; top: 16px; right: 16px; z-index: 3;
+  background: rgba(0,0,0,0.35); color: rgba(255,255,255,0.85);
+  border: none; border-radius: 8px; width: 32px; height: 32px;
+  font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.fs-toggle:hover { background: rgba(0,0,0,0.55); color: white; }
+
+/* Fullscreen overlay */
+.fs-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+}
+.fs-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.8);
+  cursor: pointer;
+}
+.fs-container {
+  position: relative; max-width: 90vw; max-height: 95vh;
+  overflow-y: auto; display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px; gap: 20px;
+}
+.fs-close {
+  position: fixed; top: 20px; right: 24px; z-index: 10000;
+  background: rgba(255,255,255,0.12); color: white; border: none;
+  border-radius: 50%; width: 40px; height: 40px; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.fs-close:hover { background: rgba(255,255,255,0.25); }
+
+/* Fullscreen resume pages */
+.fs-pages { display: flex; flex-direction: column; align-items: center; gap: 24px; width: 100%; }
+.fs-pages img {
+  max-width: 800px; width: 100%; box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+  background: white; border-radius: 4px;
+}
+.fs-pages .preview-page-label {
+  font-size: 13px; color: rgba(255,255,255,0.7); text-align: center; margin-top: -16px;
+}
+
 /* Sub views */
 .sub-view { flex: 1; padding: 16px; overflow-y: auto; }
 .sub-panel { max-width: 720px; margin: 0 auto; background: white; border-radius: 16px; border: 1px solid #bdc8ce; padding: 32px; }

@@ -1,87 +1,176 @@
 resume:
   personal:
-    name: Thrissur, Kerala 680010
-    title: AKSHAY SREEKUMAR
-    phone: https://www.behance.net/gallery/199929887/Portfolio
-    email: akshaysk59@gmail.com
+    name: ANSHUAL THOMAS
+    title: ''
+    location: Thrissur, Kerala 680653
+    phone: +91 9744291891
+    email: anshual005@gmail.com
+    github: GitHub
+    linkedin: LinkedIn
+    portfolio: ''
   summary:
-    text: PROFESSIONAL As a skilled 3D artist and developer, specialize in bringing
-      ideas to life using a combination of artistic flair and technical proficiency.
-      With a solid foundation in tools like Blender 3D and Adobe Creative Suite, approach
-      every project with a unique perspective, utilizing design thinking principles
-      to create compelling visual narratives.
+    text: Software Engineer with experience building cross-platform mobile applications
+      using Flutter and integrating REST APIs, Firebase services, and modern state
+      management solutions. Skilled in developing responsive user interfaces, implementing
+      authentication flows, and collaborating with cross-functional teams to deliver
+      scalable mobile applications. Passionate about building high-quality products,
+      solving real-world problems, and iterating quickly in fast-paced startup environments.
   experience:
-  - title: Meisterverse, Kochi, India
-    company: Worked with other artists, to performed retopology for a car project
-      ,optimizing the 3D
+  - title: Software Engineer - ZynkTech
+    company: Developed and maintained two production-ready Flutter applications with
+      responsive, user-friendly
     start_date: YYYY
     end_date: present
     bullets:
-    - model for improved performance and detailing :- Thar Roxx , Skoda Kylaq gained
-      experience in texturing using adobe substance ,and used this knowledge for
-    - texturing 3d models
-    - 3D ARTIST 04/2024 to 05/2024
-  - title: Qmetron, Trivandrum, India
-    company: Worked with other artists, to gain knowledge in 3d visualization
+    - interfaces.
+    - Built scalable UI components from Figma designs, ensuring consistency across
+      multiple screens and devices.
+    - Integrated REST APIs for authentication, order management, geolocation, and
+      real-time application updates.
+    - Implemented efficient state management and optimized application performance
+      for smooth user
+    - Collaborated with backend engineers to deliver reliable data synchronization
+      and feature integration.
+    - Performed debugging, testing, and bug fixes to improve application stability
+      and release quality.
+    - Worked closely with product stakeholders to deliver new features through rapid
+      development iterations.
+  - title: Software Trainer - Vidya Development & Training Center
+    company: Thrissur
     start_date: YYYY
     end_date: present
     bullets:
-    - 3D MODELER, ANIMATION 06/2022 to 06/2023
-    - SKAEBE LABS PRIVATE LIMITED, Thrissur, India
-    - Co-founder of the company
-  - title: JUNIOR SOFTWARE TRAINER (FREE LANCE) 09/2022 to 03/2023
-    company: Object Oriented Programming and website design Training on the Development
-      of
-    start_date: YYYY
-    end_date: present
+    - Trained 100+ students in SQL, HTML, JavaScript, CSS, and programming fundamentals.
+    - Delivered practical sessions on database design, query writing, and application
+      development.
+    - Created technical learning materials and evaluated student performance.
+    - Guided students in debugging and problem-solving techniques.
+    - Published via Git + Netlify with custom domain, forms, and production configuration.
+  projects:
+  - name: FindQ – Missing Person Command & Sighting Platform 🔗
+    technologies:
+    - 'Tech: Python'
+    - Django
+    - Django REST Framework
+    - React
+    - Vite
+    - React Native
+    - Expo
+    - Firebase (Auth
+    - Realtime
     bullets:
-    - ASP.NET Framework based websites.
-  projects: []
+    - Database), Supabase Storage, DeepFace, TensorFlow, NumPy, scikit-learn, Pillow,
+      OpenCV, bcrypt
+    - Built a full-stack missing-person platform with a police web command center,
+      mobile sighting app, and
+    - Django API for case registration and AI-assisted face matching.
+    - Designed a two-level authentication model with police station login and duty-officer
+      selection, plus unique case IDs (case_ref) and Firebase push keys for audit-ready
+      case management.
+    - Implemented end-to-end case workflows including dossiers, investigation notes,
+      lifecycle states
+    - (active/found/closed), printable posters with QR codes, and system logging for
+      operational traceability.
+    - Integrated DeepFace (Facenet512) embeddings with cosine-similarity matching,
+      Supabase image storage, and Firebase-backed data sync to support real-time case
+      updates across web and mobile clients.
+  - name: Orange Launcher – Minimalist Android Home Launcher & Digital Wellness App
+    technologies:
+    - 'Tech: Flutter'
+    - Dart
+    - Kotlin
+    - Riverpod
+    - go_router
+    - Android MethodChannel
+    - SharedPreferences
+    - UsageStats API
+    bullets:
+    - KeyguardManager, Google Fonts, Git
+    - Built a gesture-based Android launcher with app drawer, customizable home/dock,
+      and a right-panel wellness dashboard (screen time, recents, weather, quick actions).
+    - Integrated native Kotlin services for usage stats, notifications, keyguard unlock,
+      and accessibility hooks via MethodChannel.
+    - Implemented digital wellbeing controls including focus mode, app blocking schedules,
+      launch friction, and screen-time budgets with Riverpod state management.
+  - name: NeoVault – Fintech Gaming Platform (Demo) 🔗
+    technologies:
+    - 'Tech: Flutter'
+    - Dart
+    - JSON
+    - REST API
+    - Git
+    bullets:
+    - Designed modular application architecture separating presentation, business,
+      and data layers.
+    - Modeled structured JSON datasets for wallet balances, transactions, and leaderboard
+      data.
+    - Implemented REST API integration and asynchronous data processing for transaction
+      and analytics modules.
+    - Optimized state management to ensure reliable data synchronization and responsive
+      user experience.
+  - name: PPD – Structured Resume Data Platform 🔗
+    technologies:
+    - 'Tech: Python'
+    - PyMuPDF
+    - Tesseract OCR
+    - Typst
+    - YAML/JSON
+    - GitHub Actions
+    - Linux Shell Scripting
+    bullets:
+    - Built an end-to-end ETL pipeline to ingest PDF/image resumes, extract raw text,
+      and transform it into a structured data model.
+    - Designed semantic parsing and data profiling logic to identify resume sections,
+      normalize extracted fields, and improve data quality.
+    - Processed structured and unstructured data into standardized JSON/YAML formats
+      for downstream PDF generation and preview.
+    - Automated batch processing and CI/CD workflows using GitHub Actions and PyInstaller
+      to streamline cross-platform builds.
+    - Creative Portfolio Website | sidharth-kv.netlify.app
+    - 'Tech: HTML, CSS, JavaScript, Git, Netlify'
+    - Built and deployed a multi-page portfolio with dynamic project rendering, 3D
+      model preview, and interactive media components using HTML, CSS, and JavaScript.
+    - Reduced asset sizes by ~98% through image optimization for faster cloud deployment
+      and improved user
   skills:
     frontend: []
     backend: []
     database: []
     cloud_tools: []
     other:
-    - Animation and 3D modelling
-    - Graphics design
-    - ●
-    - ●
-    - Object Oriented Programming
-    - Adobe Creative suite
-    - ●
-    - ●
-    - Web Design
-    - Front End Coding
-    - ●
-    - ●
-    - Content Creation
-    - Figma
-    - ●
-    - ●
-    - Video Editing
-    - ●
+    - Flutter
+    - Dart
+    - React Native
+    - Git & GitHub Version Control
+    - Firebase Authentication & Firestore
+    - Figma to Flutter UI Implementation
+    - REST API Development & Integration
+    - Clean Architecture & Repository Pattern
+    - State Management (BLoC
+    - Provider
+    - Custom
+    - Debugging
+    - Testing & Bug Fixing
+    - Architecture)
+    - Agile Collaboration & Cross-Team Communication
+    - Responsive UI Development & Performance
+    - JSON Parsing & API Consumption
+    - Optimization
   education:
-  - degree: Professional Diploma In, Multimedia Animation, 02/2025
-    institution: APJ Abdul Kalam Technological University, Thrissur, Kerala
-  - degree: Bachelor of Technology, Computer Science And Engineering, 07/2022
-    institution: Govt.Model Girls, Thrissur, Kerala
-  - degree: SECONDARY SCHOOL, COMPUTER SCIENCE , 03/2018
-    institution: 'Board: STATE Board'
+  - degree: Bachelor of Engineering in Computer Science and Engineering
+    institution: 2018-2022
+  - degree: Kerala Higher Secondary Examination
+    institution: 2016-2018
   certifications:
-  - Programming for everybody (getting started with python)
-  - IoT using raspberry Pi
-  - Python 3.4.3 Training
-  - Machine learning workshop
-  - OOP And C++ Certificate
-  - PERSONAL
-  - 'Title: 3D Artist & Developer'
-  - INFORMATION
+  - Architecting with Google Compute Engine
+  - AWS Business Architecture
+  - Computer Communications Specialization
   custom_sections: []
   visible_sections:
   - personal
   - summary
   - experience
+  - projects
   - skills
   - education
   - certifications

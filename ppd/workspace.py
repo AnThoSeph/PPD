@@ -34,6 +34,7 @@ class WorkspacePaths:
     design_spec: Path
     jobs_file: Path
     config: Path
+    custom_templates_dir: Path
 
     @classmethod
     def from_id(cls, workspace_id: str) -> WorkspacePaths:
@@ -42,10 +43,12 @@ class WorkspacePaths:
         if wid == "default":
             data = base / "data"
             output_dir = base / "output"
+            custom_templates = data / "templates"
         else:
             ws = base / "workspaces" / wid
             data = ws / "data"
             output_dir = ws / "output"
+            custom_templates = data / "templates"
         return cls(
             workspace_id=wid,
             root=base,
@@ -63,6 +66,7 @@ class WorkspacePaths:
             else base / "design-spec.json",
             jobs_file=data / "jobs.json",
             config=data / "config.yaml",
+            custom_templates_dir=custom_templates,
         )
 
     def ensure_dirs(self) -> None:
@@ -71,5 +75,6 @@ class WorkspacePaths:
             self.source_dir,
             self.output_dir,
             self.design_spec.parent,
+            self.custom_templates_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)

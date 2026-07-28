@@ -302,42 +302,48 @@ const SectionEditor = (() => {
     return card;
   }
 
-  function renderCustomSections() {
-    const wrap = el('div');
-    resume.custom_sections.forEach((sec, i) => {
-      const block = el('div', 'sec-sub');
-      block.innerHTML = `<div class="sec-sub-head">${esc(sec.title || `Section ${i + 1}`)}
-        <button type="button" class="sec-del" data-del-custom="${i}">Remove</button></div>
-        ${field('Section Title', 'title', sec.title)}
-        <label class="sec-field"><span>Items (one per line)</span>
-          <textarea data-custom-items="${i}" rows="4">${esc((sec.items || []).join('\n'))}</textarea></label>`;
-      block.querySelector('[data-field]').addEventListener('input', (e) => {
-        resume.custom_sections[i].title = e.target.value;
-        markUnsaved(wrap.closest('.sec-card'));
-        scheduleChange();
-      });
-      block.querySelector(`[data-custom-items="${i}"]`).addEventListener('input', (e) => {
-        resume.custom_sections[i].items = listToBullets(e.target.value);
-        markUnsaved(wrap.closest('.sec-card'));
-        scheduleChange();
-      });
-      block.querySelector(`[data-del-custom="${i}"]`).onclick = () => {
-        resume.custom_sections.splice(i, 1);
-        rerender();
-        scheduleChange();
-      };
-      wrap.appendChild(block);
+  function renderCustomSectionByIndex(i) {
+    const sec = resume.custom_sections[i];
+    if (!sec) return null;
+    const block = el('div', 'sec-sub');
+    block.innerHTML = `<div class="sec-sub-head">${esc(sec.title || `Section ${i + 1}`)}
+      <button type="button" class="sec-del" data-del-custom="${i}">Remove</button></div>
+      ${field('Section Title', 'title', sec.title)}
+      <label class="sec-field"><span>Items (one per line)</span>
+        <textarea data-custom-items="${i}" rows="4">${esc((sec.items || []).join('\n'))}</textarea></label>`;
+    block.querySelector('[data-field]').addEventListener('input', (e) => {
+      resume.custom_sections[i].title = e.target.value;
+      scheduleChange();
     });
-    const addBtn = el('button', 'sec-add', '+ Add Custom Section');
-    addBtn.type = 'button';
-    addBtn.onclick = () => {
-      resume.custom_sections.push({ title: 'Awards', items: [] });
+    block.querySelector(`[data-custom-items="${i}"]`).addEventListener('input', (e) => {
+      resume.custom_sections[i].items = listToBullets(e.target.value);
+      scheduleChange();
+    });
+    block.querySelector(`[data-del-custom="${i}"]`).onclick = () => {
+      resume.custom_sections.splice(i, 1);
+      visibleSections = visibleSections.filter(s => !s.startsWith('custom_'));
+      resume.custom_sections.forEach((_, idx) => visibleSections.push(`custom_${idx}`));
       rerender();
       scheduleChange();
     };
-    wrap.appendChild(addBtn);
-    const card = sectionCard('Custom Sections', '');
-    card.querySelector('.sec-body').appendChild(wrap);
+    const card = sectionCard(sec.title || `Section ${i + 1}`, '');
+    card.querySelector('.sec-body').appendChild(block);
+    return card;
+  }
+
+  function renderAddCustomSection() {
+    const btn = el('button', 'sec-add', '+ Add Custom Section');
+    btn.type = 'button';
+    btn.onclick = () => {
+      const idx = resume.custom_sections.length;
+      resume.custom_sections.push({ title: 'Awards', items: [] });
+      visibleSections.push(`custom_${idx}`);
+      rerender();
+      scheduleChange();
+    };
+    const card = sectionCard('Add Section', '');
+    card.querySelector('.sec-body').appendChild(btn);
+    card.querySelector('.sec-head').style.display = 'none';
     return card;
   }
 
@@ -359,15 +365,34 @@ const SectionEditor = (() => {
       skills: renderSkills,
       education: renderEducation,
       certifications: renderCertifications,
-      custom_sections: renderCustomSections,
     };
 
+    let hasCustom = false;
     visibleSections.forEach((key) => {
+      if (key.startsWith('custom_')) {
+        const idx = parseInt(key.slice(7), 10);
+        if (!isNaN(idx) && idx < resume.custom_sections.length) {
+          const card = renderCustomSectionByIndex(idx);
+          if (card) { root.appendChild(card); hasCustom = true; }
+        }
+        return;
+      }
+      if (key === 'custom_sections') {
+        resume.custom_sections.forEach((_, idx) => {
+          const card = renderCustomSectionByIndex(idx);
+          if (card) { root.appendChild(card); hasCustom = true; }
+        });
+        return;
+      }
       const build = builders[key];
       if (!build) return;
       const card = build();
       if (card) root.appendChild(card);
     });
+    if (hasCustom) {
+      const addCard = renderAddCustomSection();
+      if (addCard) root.appendChild(addCard);
+    }
   }
 
   function loadFromStructured(data) {

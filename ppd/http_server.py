@@ -206,6 +206,19 @@ def templates(api: PPDApi = Depends(get_api), _: None = Depends(_require_auth)) 
     return api.get_templates()
 
 
+@app.post("/templates/upload")
+async def upload_template(
+    file: UploadFile = File(...),
+    api: PPDApi = Depends(get_api),
+    _: None = Depends(_require_auth),
+) -> dict[str, Any]:
+    data = await file.read()
+    filename = file.filename or "template.typ"
+    result = api.upload_template(filename, data)
+    _fail(result)
+    return result
+
+
 @app.put("/templates/{template_id}")
 def set_template(template_id: str, api: PPDApi = Depends(get_api), _: None = Depends(_require_auth)) -> dict[str, Any]:
     result = api.set_preview_template(template_id)
