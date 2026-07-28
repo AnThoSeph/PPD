@@ -453,6 +453,24 @@ async function extractContent() {
   }
 }
 
+async function uploadTemplate() {
+  showLoading('Select a .typ template file…');
+  try {
+    const r = await call('pick_and_upload_template');
+    if (r.cancelled) { hideLoading(); return; }
+    if (!r.ok) { toast(r.message, true, 6000); hideLoading(); return; }
+    if (r.templates) {
+      renderTemplatePicker(r.templates, r.template_id);
+      renderTemplatesGallery(r.templates, r.template_id);
+    }
+    toast(`Template "${r.template_id}" uploaded successfully`, false, 4000);
+  } catch (e) {
+    toast(e.message, true, 6000);
+  } finally {
+    hideLoading();
+  }
+}
+
 async function loadSkillGap() {
   try {
     const r = await call('get_skill_gap', await getYamlForApi());
@@ -611,6 +629,10 @@ function initEvents() {
     hideLoading();
   };
   $('btn-analyze-design').onclick = () => $('btn-analyze').click();
+  const uploadTmplBtn = $('btn-upload-template');
+  if (uploadTmplBtn) uploadTmplBtn.onclick = uploadTemplate;
+  const uploadTmplQuick = $('btn-upload-template-quick');
+  if (uploadTmplQuick) uploadTmplQuick.onclick = uploadTemplate;
 
   $('chat-send').onclick = sendChat;
   $('chat-input').addEventListener('keydown', (e) => {
@@ -687,6 +709,73 @@ async function boot() {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Fullscreen preview
+// ---------------------------------------------------------------------------
+let isFullscreen = false;
+
+function openFullscreen() {
+  const overlay = $('preview-fullscreen');
+  const fsPages = $('fs-pages');
+  const previewPages = $('preview-pages');
+  if (!overlay || !fsPages) return;
+
+  fsPages.innerHTML = '';
+  const imgs = previewPages.querySelectorAll('img');
+  if (imgs.length) {
+    imgs.forEach((img, idx) => {
+      const clone = img.cloneNode(true);
+      const wrap = document.createElement('div');
+      wrap.style.width = '100%';
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.alignItems = 'center';
+      wrap.appendChild(clone);
+      if (imgs.length > 1) {
+        const label = document.createElement('div');
+        label.className = 'preview-page-label';
+        label.textContent = `Page ${idx + 1} of ${imgs.length}`;
+        wrap.appendChild(label);
+      }
+      fsPages.appendChild(wrap);
+    });
+  } else {
+    const msg = document.createElement('p');
+    msg.style.color = 'rgba(255,255,255,0.5)';
+    msg.style.fontSize = '14px';
+    msg.textContent = 'No preview available — upload a resume first.';
+    fsPages.appendChild(msg);
+  }
+
+  overlay.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  isFullscreen = true;
+}
+
+function closeFullscreen() {
+  const overlay = $('preview-fullscreen');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  document.body.style.overflow = '';
+  isFullscreen = false;
+}
+
+function toggleFullscreen() {
+  if (isFullscreen) closeFullscreen();
+  else openFullscreen();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isFullscreen) closeFullscreen();
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'fs-backdrop') closeFullscreen();
+});
+
+$('btn-fullscreen').onclick = toggleFullscreen;
+$('fs-close').onclick = closeFullscreen;
 
 window.addEventListener('pywebviewready', () => boot());
 if (document.readyState === 'loading') {

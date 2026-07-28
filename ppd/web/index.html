@@ -104,6 +104,7 @@
             <p id="preview-mode-note" class="preview-mode-note">Upload a PDF — your exact layout becomes the default template.</p>
             <p class="template-picker-label">Choose template</p>
             <div id="template-picker" class="template-picker"></div>
+            <button id="btn-upload-template-quick" class="btn-export-template" style="margin-top:8px">+ Upload Custom Template (.typ)</button>
           </div>
           <div class="preview-box">
             <div class="preview-scores">
@@ -116,6 +117,7 @@
               </div>
               <div class="skill-badge" id="skill-match">Skill Match: 0%</div>
             </div>
+            <button id="btn-fullscreen" class="fs-toggle" title="Fullscreen preview">⛶</button>
             <div class="preview-canvas">
               <div id="preview-pages"></div>
               <img id="preview-img" class="hidden" alt="Resume preview"/>
@@ -290,7 +292,10 @@
         <h2>Resume Templates</h2>
         <p class="templates-intro">Your uploaded PDF is the default template. Choose from 11 ATS-friendly layouts below — all use your extracted content, single-column, and parser-safe formatting.</p>
         <div id="templates-gallery" class="templates-gallery"></div>
-        <button id="btn-analyze-design" class="btn-analyze-design">Re-analyze uploaded PDF design</button>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+          <button id="btn-analyze-design" class="btn-analyze-design">Re-analyze uploaded PDF design</button>
+          <button id="btn-upload-template" class="btn-analyze-design" style="background:#0d9488">Upload Custom Template (.typ)</button>
+        </div>
       </div>
     </div>
 
@@ -298,6 +303,13 @@
   </div>
 </div>
 
+<div id="preview-fullscreen" class="fs-overlay hidden">
+  <div class="fs-backdrop" id="fs-backdrop"></div>
+  <div class="fs-container">
+    <button id="fs-close" class="fs-close" title="Exit fullscreen">✕</button>
+    <div id="fs-pages" class="fs-pages"></div>
+  </div>
+</div>
 <div id="toast" class="hidden"></div>
 <script src="section-editor.js"></script>
 <script src="job-tracker.js"></script>

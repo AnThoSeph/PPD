@@ -1,6 +1,2 @@
-# Build tools (only needed to create the .exe)
+# Build tools (only needed to create the executable)
 pyinstaller>=6.0
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"

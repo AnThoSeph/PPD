@@ -11,6 +11,7 @@ import yaml
 
 from ppd.paths import app_root, ensure_runtime_dirs, templates_dir
 from ppd.template_catalog import (
+    USER_TEMPLATE_PREFIX,
     uses_design_vars,
     uses_v2_yaml,
 )
@@ -23,9 +24,9 @@ DEFAULT_RESUME = PROJECT_ROOT / "data" / "resume.yaml"
 DEFAULT_OUTPUT = PROJECT_ROOT / "output" / "resume.pdf"
 
 
-def _template_paths() -> dict[str, Path]:
+def _template_paths(custom_templates_dir: Path | None = None) -> dict[str, Path]:
     tdir = templates_dir()
-    return {
+    paths = {
         "ats-standard": tdir / "ats-standard.typ",
         "ats-modern": tdir / "ats-modern.typ",
         "ats-bold": tdir / "ats-bold.typ",
@@ -41,6 +42,11 @@ def _template_paths() -> dict[str, Path]:
         "resume-io-clone": tdir / "resume-io-clone.typ",
         "compact": tdir / "compact.typ",
     }
+    if custom_templates_dir and custom_templates_dir.exists():
+        for f in sorted(custom_templates_dir.glob("*.typ")):
+            tid = f"{USER_TEMPLATE_PREFIX}{f.stem}"
+            paths[tid] = f
+    return paths
 
 
 def load_config(config_path: Path | None = None) -> dict:
@@ -92,6 +98,7 @@ def build_pdf(
     output_path: Path | None = None,
     config_path: Path | None = None,
     design_spec_path: Path | None = None,
+    custom_templates_dir: Path | None = None,
 ) -> Path:
     ensure_runtime_dirs()
     config = load_config(config_path)
@@ -99,7 +106,7 @@ def build_pdf(
     template_key = template_name or config.get("template", "resume-io-clone")
     output_file = resolve_path(output_path or config.get("output", DEFAULT_OUTPUT))
 
-    templates = _template_paths()
+    templates = _template_paths(custom_templates_dir)
     if template_key not in templates:
         raise ValueError(f"Unknown template '{template_key}'. Choose from: {', '.join(templates)}")
 

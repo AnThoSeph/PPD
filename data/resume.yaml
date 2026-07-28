@@ -1,115 +1,170 @@
 resume:
   personal:
-    name: LENA BIJU
-    location: Ollur, Kerala 680306
-    phone: +91 9447900650
-    email: lenabiju2001@gmail.com
+    name: ANSHUAL THOMAS
+    title: ''
+    location: Thrissur, Kerala 680653
+    phone: +91 9744291891
+    email: anshual005@gmail.com
+    github: GitHub
+    linkedin: LinkedIn
+    portfolio: ''
   summary:
-    text: Detail-oriented and adaptive Computer Science graduate with hands-on experience
-      in Java development, object-oriented programming, and backend system design.
-      Proficient in writing clean, maintainable Java code and optimizing system performance.
-      Demonstrated ability to solve complex problems and deliver robust solutions
-      under tight deadlines through internships, projects, and hackathons. Designed
-      both the website and app in Figma to ensure a user-friendly interface.   Implemented
-      Convolutional Neural Network (CNN) methods for accurate image recognition and
-      matching.  Ensured seamless integration between the app and website, enhancing
-      the efficiency of the alert system for missing persons. · Online Portfolio Website
-       Designed and developed a personal portfolio website to showcase projects and
-      skills. Used HTML, CSS, and JavaScript for front-end development.  Integrated
-      responsive design principles to ensure compatibility across devices. 
+    text: Software Engineer with experience building cross-platform mobile applications
+      using Flutter and integrating REST APIs, Firebase services, and modern state
+      management solutions. Skilled in developing responsive user interfaces, implementing
+      authentication flows, and collaborating with cross-functional teams to deliver
+      scalable mobile applications. Passionate about building high-quality products,
+      solving real-world problems, and iterating quickly in fast-paced startup environments.
   experience:
-  - title: CUSTOMER SERVICE ASSOCIATE| SUTHERLAND GLOBAL SERVICES | JUNE 2024 –
-    company: SEPTEMBER 2024
+  - title: Software Engineer - ZynkTech
+    company: Developed and maintained two production-ready Flutter applications with
+      responsive, user-friendly
     start_date: YYYY
     end_date: present
     bullets:
-    - Worked as a Customer Service Associate for Amazon Chat Support under Sutherland,
-      achieving a 95% customer satisfaction rate by promptly resolving issues. Assisted
-      100+ customers daily while maintaining a positive and helpful attitude.
-    - Reduced average handling time by 15%, improving overall service efficiency.
-    - Increased customer retention by 10% through effective communication and problem
-      resolution.
-    - Developed and implemented customer service initiatives to minimize wait times.
-    - Utilized Amazon's internal tools and software to efficiently address customer
-      concerns.
-    - Consistently provided constructive feedback to management, contributing to product
-      and service improvements.
-    - PARTICIPANT - EMBEDDED SOFTWARE HACKATHON | HARDPOINT CONSULTING
-    - INTERNATIONAL | FEBRUARY 2024
-    - Developed web application that improved task management efficiency by 30%.
-    - Collaborated with team of four to design and implement innovative solutions
-      within 48-hour deadline.
-    - Created data visualization tool, leading to better decision-making and analysis.
-    - Received recognition for best user interface design among 20 competing teams.
-    - Improved system performance by 25% through optimized coding techniques.
-  - title: INTERN| PACE LAB| MAY 2023
-    company: Developed system that reduced data processing time by 20%.
+    - interfaces.
+    - Built scalable UI components from Figma designs, ensuring consistency across
+      multiple screens and devices.
+    - Integrated REST APIs for authentication, order management, geolocation, and
+      real-time application updates.
+    - Implemented efficient state management and optimized application performance
+      for smooth user
+    - Collaborated with backend engineers to deliver reliable data synchronization
+      and feature integration.
+    - Performed debugging, testing, and bug fixes to improve application stability
+      and release quality.
+    - Worked closely with product stakeholders to deliver new features through rapid
+      development iterations.
+  - title: Software Trainer - Vidya Development & Training Center
+    company: Thrissur
     start_date: YYYY
     end_date: present
     bullets:
-    - 
-    - 
-    - Conducted over 50 chemical analyses weekly, ensuring accuracy and compliance
-      with industry standards.
-    - 
-    - Collaborated with team to establish new laboratory protocols, improving efficiency
-      by 15%.
-    - 
-    - Performed quality control tests on 100+ samples per month, maintaining 98% accuracy
-      rate.
-    - Increased efficiency of sample documentation by 25% through implementation of
-      digital tracking
-    -  system.
+    - Trained 100+ students in SQL, HTML, JavaScript, CSS, and programming fundamentals.
+    - Delivered practical sessions on database design, query writing, and application
+      development.
+    - Created technical learning materials and evaluated student performance.
+    - Guided students in debugging and problem-solving techniques.
+    - Published via Git + Netlify with custom domain, forms, and production configuration.
   projects:
-  - name: Developed a website for official authorities to track and manage missing
-      person cases using
-    technologies: []
+  - name: FindQ – Missing Person Command & Sighting Platform 🔗
+    technologies:
+    - 'Tech: Python'
+    - Django
+    - Django REST Framework
+    - React
+    - Vite
+    - React Native
+    - Expo
+    - Firebase (Auth
+    - Realtime
     bullets:
-    - 'FindQ: Missing Person Finder  ReactJS.'
-    - Created a mobile app with React Native for the public to upload images and inform
-      officials 
+    - Database), Supabase Storage, DeepFace, TensorFlow, NumPy, scikit-learn, Pillow,
+      OpenCV, bcrypt
+    - Built a full-stack missing-person platform with a police web command center,
+      mobile sighting app, and
+    - Django API for case registration and AI-assisted face matching.
+    - Designed a two-level authentication model with police station login and duty-officer
+      selection, plus unique case IDs (case_ref) and Firebase push keys for audit-ready
+      case management.
+    - Implemented end-to-end case workflows including dossiers, investigation notes,
+      lifecycle states
+    - (active/found/closed), printable posters with QR codes, and system logging for
+      operational traceability.
+    - Integrated DeepFace (Facenet512) embeddings with cosine-similarity matching,
+      Supabase image storage, and Firebase-backed data sync to support real-time case
+      updates across web and mobile clients.
+  - name: Orange Launcher – Minimalist Android Home Launcher & Digital Wellness App
+    technologies:
+    - 'Tech: Flutter'
+    - Dart
+    - Kotlin
+    - Riverpod
+    - go_router
+    - Android MethodChannel
+    - SharedPreferences
+    - UsageStats API
+    bullets:
+    - KeyguardManager, Google Fonts, Git
+    - Built a gesture-based Android launcher with app drawer, customizable home/dock,
+      and a right-panel wellness dashboard (screen time, recents, weather, quick actions).
+    - Integrated native Kotlin services for usage stats, notifications, keyguard unlock,
+      and accessibility hooks via MethodChannel.
+    - Implemented digital wellbeing controls including focus mode, app blocking schedules,
+      launch friction, and screen-time budgets with Riverpod state management.
+  - name: NeoVault – Fintech Gaming Platform (Demo) 🔗
+    technologies:
+    - 'Tech: Flutter'
+    - Dart
+    - JSON
+    - REST API
+    - Git
+    bullets:
+    - Designed modular application architecture separating presentation, business,
+      and data layers.
+    - Modeled structured JSON datasets for wallet balances, transactions, and leaderboard
+      data.
+    - Implemented REST API integration and asynchronous data processing for transaction
+      and analytics modules.
+    - Optimized state management to ensure reliable data synchronization and responsive
+      user experience.
+  - name: PPD – Structured Resume Data Platform 🔗
+    technologies:
+    - 'Tech: Python'
+    - PyMuPDF
+    - Tesseract OCR
+    - Typst
+    - YAML/JSON
+    - GitHub Actions
+    - Linux Shell Scripting
+    bullets:
+    - Built an end-to-end ETL pipeline to ingest PDF/image resumes, extract raw text,
+      and transform it into a structured data model.
+    - Designed semantic parsing and data profiling logic to identify resume sections,
+      normalize extracted fields, and improve data quality.
+    - Processed structured and unstructured data into standardized JSON/YAML formats
+      for downstream PDF generation and preview.
+    - Automated batch processing and CI/CD workflows using GitHub Actions and PyInstaller
+      to streamline cross-platform builds.
+    - Creative Portfolio Website | sidharth-kv.netlify.app
+    - 'Tech: HTML, CSS, JavaScript, Git, Netlify'
+    - Built and deployed a multi-page portfolio with dynamic project rendering, 3D
+      model preview, and interactive media components using HTML, CSS, and JavaScript.
+    - Reduced asset sizes by ~98% through image optimization for faster cloud deployment
+      and improved user
   skills:
     frontend: []
     backend: []
     database: []
     cloud_tools: []
     other:
-    - Core Java & Object-Oriented Programming
-    - Algorithmic Problem-Solving
-    - Java Collections Framework & Multithreading
-    - Unit Testing (JUnit
-    - if familiar)
-    - Exception Handling & File I
-    - O
-    - Version Control with Git
-    - Basic Selenium Automation (Java integration)
-    - Strong Analytical Thinking
-    - Debugging & Code Optimization
+    - Flutter
+    - Dart
+    - React Native
+    - Git & GitHub Version Control
+    - Firebase Authentication & Firestore
+    - Figma to Flutter UI Implementation
+    - REST API Development & Integration
+    - Clean Architecture & Repository Pattern
+    - State Management (BLoC
+    - Provider
+    - Custom
+    - Debugging
+    - Testing & Bug Fixing
+    - Architecture)
+    - Agile Collaboration & Cross-Team Communication
+    - Responsive UI Development & Performance
+    - JSON Parsing & API Consumption
+    - Optimization
   education:
-  - degree: BACHELOR OF ENGINEERING IN COMPUTER SCIENCE AND ENGINEERING| MAY 2024
-    institution: APJ ABDUL KALAM TECHNOLOGICAL UNIVERSITY – THRISSUR, KERALA
-    gpa: GPA – 7.3
-  - degree: KERALA HIGHER SECONDARY EXAMINATION BOARD | MAY 2019
-    institution: Institution
-  - degree: SACRED HEART SCHOOL – THRISSUR, KERALA
-    institution: PERCENTAGE – 83.33
+  - degree: Bachelor of Engineering in Computer Science and Engineering
+    institution: 2018-2022
+  - degree: Kerala Higher Secondary Examination
+    institution: 2016-2018
   certifications:
-  - Workshop on Python for Machine Learning (05/2022)
-  - 'C for Everyone: Programming Fundamentals (Coursera, 08/2021)'
-  - Workshop on Metaverse, NFTs & Digital Realities (NIT, 02/2022)
-  - Workshop on Data Science (NIT, 02/2022)
-  - Python for Data Science (VAST, 11/2022)
-  - Reference
-  - Ms. Mithu Varghees
-  - Asst. Professor of CSE Department
-  - Vidya Academy of Science and Technology
-  - +91 94474 34862
-  - Page 2
-  - mithu816@vidyaacademy.ac.in
-  - Disclaimer
-  - I hereby declare that all the information given above is true and correct to the
-    best of my knowledge.
-  - Page 3
+  - Architecting with Google Compute Engine
+  - AWS Business Architecture
+  - Computer Communications Specialization
   custom_sections: []
   visible_sections:
   - personal

@@ -51,11 +51,14 @@ def gui() -> None:
 
 
 @main.command()
-def gui_tk() -> None:
-    """Launch the legacy tkinter app."""
-    from ppd.gui import main_tk
+@click.option("--host", default="0.0.0.0", show_default=True)
+@click.option("--port", default=8765, show_default=True, type=int)
+@click.option("--reload", is_flag=True, help="Auto-reload on code changes (dev only).")
+def serve(host: str, port: int, reload: bool) -> None:
+    """Start the REST API server for mobile clients."""
+    import uvicorn
 
-    main_tk()
+    uvicorn.run("ppd.http_server:app", host=host, port=port, reload=reload)
 
 
 @main.command()

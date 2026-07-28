@@ -24,36 +24,13 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $dist "PPD-Resume.exe")))
 if (-not (Test-Path (Join-Path $dist "PPD-Resume.exe"))) {
     $alt = Join-Path $PSScriptRoot "dist-win\PPD-Resume"
     if (Test-Path (Join-Path $alt "PPD-Resume.exe")) { $dist = $alt }
-    else { throw "Build failed — PPD-Resume.exe not found." }
+    else { throw "Build failed - PPD-Resume.exe not found." }
 }
 
 $tools = Join-Path $dist "tools"
 New-Item -ItemType Directory -Force -Path $tools | Out-Null
 
-$typstCmd = Get-Command typst -ErrorAction SilentlyContinue
-if ($null -ne $typstCmd) {
-    Copy-Item $typstCmd.Source (Join-Path $tools "typst.exe") -Force
-    Write-Host "Bundled typst.exe from PATH" -ForegroundColor Green
-}
-else {
-    Write-Host "Typst not on PATH - downloading portable typst..." -ForegroundColor Yellow
-    $zipUrl = "https://github.com/typst/typst/releases/download/v0.14.2/typst-x86_64-pc-windows-msvc.zip"
-    $zipPath = Join-Path $env:TEMP "typst.zip"
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
-    $extractDir = Join-Path $env:TEMP "typst-extract"
-    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-    $typstExe = Get-ChildItem -Path $extractDir -Recurse -Filter "typst.exe" | Select-Object -First 1
-    if ($null -ne $typstExe) {
-        Copy-Item $typstExe.FullName (Join-Path $tools "typst.exe") -Force
-        Write-Host "Bundled typst.exe from GitHub release" -ForegroundColor Green
-    }
-    else {
-        Write-Host "Could not bundle Typst - install manually: winget install Typst.Typst" -ForegroundColor Red
-    }
-}
-
-New-Item -ItemType Directory -Force -Path (Join-Path $dist "data\source") | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $dist "output") | Out-Null
+& (Join-Path $PSScriptRoot "scripts\bundle-tools-windows.ps1") -DistDir $dist
 
 Write-Host ""
 Write-Host "Done! Run:" -ForegroundColor Green

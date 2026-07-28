@@ -1,0 +1,17 @@
+services:
+  ppd-api:
+    build: .
+    ports:
+      - "8765:8765"
+    environment:
+      PPD_API_KEY: ${PPD_API_KEY:-dev-key}
+      PPD_ALLOW_OPEN: ${PPD_ALLOW_OPEN:-0}
+    volumes:
+      - ppd-workspaces:/app/workspaces
+      - ppd-data:/app/data
+      - ppd-output:/app/output
+
+volumes:
+  ppd-workspaces:
+  ppd-data:
+  ppd-output:

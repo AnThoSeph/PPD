@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 SOURCE_TEMPLATE_ID = "source"
+USER_TEMPLATE_PREFIX = "user_"
 
 ATS_TEMPLATES: list[dict[str, Any]] = [
     {
@@ -110,7 +111,37 @@ V2_TEMPLATE_IDS = frozenset(t["id"] for t in ATS_TEMPLATES if t["id"].startswith
 DESIGN_TEMPLATE_IDS = frozenset({"anshual-frontend", "resume-io-clone"})
 
 
-def template_list(has_upload_design: bool, source_label: str | None = None) -> list[dict[str, Any]]:
+def scan_custom_templates(custom_templates_dir: Path | None) -> list[dict[str, Any]]:
+    """Scan the custom templates directory for .typ files uploaded by the user."""
+    if not custom_templates_dir or not custom_templates_dir.exists():
+        return []
+    results: list[dict[str, Any]] = []
+    for f in sorted(custom_templates_dir.glob("*.typ")):
+        stem = f.stem
+        safe = _sanitize_template_name(stem)
+        tid = f"{USER_TEMPLATE_PREFIX}{safe}"
+        name = stem.replace("-", " ").replace("_", " ").title()
+        results.append({
+            "id": tid,
+            "name": name,
+            "description": f"Custom template: {name}",
+            "ats_friendly": True,
+            "category": "custom",
+            "tag": "Custom",
+        })
+    return results
+
+
+def _sanitize_template_name(name: str) -> str:
+    import re
+    return re.sub(r"[^a-zA-Z0-9_-]", "", name)[:64] or "unnamed"
+
+
+def template_list(
+    has_upload_design: bool,
+    source_label: str | None = None,
+    custom_templates_dir: Path | None = None,
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
 
     if has_upload_design:
@@ -131,6 +162,9 @@ def template_list(has_upload_design: bool, source_label: str | None = None) -> l
         item["default"] = not has_upload_design and entry["id"] == "ats-standard"
         items.append(item)
 
+    custom = scan_custom_templates(custom_templates_dir)
+    items.extend(custom)
+
     return items
 
 
@@ -149,7 +183,11 @@ def uses_design_vars(typst_key: str) -> bool:
 
 
 def uses_v2_yaml(typst_key: str) -> bool:
-    return typst_key in V2_TEMPLATE_IDS
+    if typst_key in V2_TEMPLATE_IDS:
+        return True
+    if typst_key.startswith(USER_TEMPLATE_PREFIX):
+        return True
+    return False
 
 
 def source_label_from_spec(design_spec_path: Path | None) -> str:

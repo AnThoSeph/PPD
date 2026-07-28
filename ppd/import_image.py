@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ppd.tesseract_util import configure_tesseract
+
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
 
@@ -14,21 +16,21 @@ def extract_text_lines(image_path: Path) -> list[str]:
         from PIL import Image
     except ImportError as exc:
         raise RuntimeError(
-            "Image OCR requires: pip install pillow pytesseract\n"
-            "Also install Tesseract: winget install UB-Mannheim.TesseractOCR"
+            "Image OCR requires pillow and pytesseract.\n"
+            "Reinstall PPD or run: pip install pillow pytesseract"
         ) from exc
 
-    try:
-        pytesseract.get_tesseract_version()
-    except Exception as exc:
-        raise RuntimeError(
-            "Tesseract OCR is not installed or not on PATH.\n"
-            "Install with: winget install UB-Mannheim.TesseractOCR"
-        ) from exc
+    configure_tesseract()
 
     image = Image.open(image_path)
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
 
     text = pytesseract.image_to_string(image)
-    return [line.strip() for line in text.splitlines() if line.strip()]
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        raise RuntimeError(
+            "OCR found no text in this image.\n"
+            "Use a clear, high-resolution photo or scan — or upload a PDF instead."
+        )
+    return lines

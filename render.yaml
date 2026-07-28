@@ -1,0 +1,16 @@
+# Free Render Blueprint — https://dashboard.render.com/blueprints
+# After deploy, copy the public URL + PPD_API_KEY into the Flutter app Settings.
+services:
+  - type: web
+    name: ppd-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PPD_API_KEY
+        generateValue: true
+      - key: PPD_ALLOW_OPEN
+        value: "0"
