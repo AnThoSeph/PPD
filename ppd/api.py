@@ -16,7 +16,7 @@ from typing import Any
 import fitz
 import yaml
 
-from ppd.assistant import apply_action, chat_response, get_greeting_and_insights
+from ppd.assistant import apply_action, chat_response, chat_response_structured, get_greeting_and_insights
 from ppd.ats import compute_ats_score, compute_skill_match, skill_gap_analysis
 from ppd.build import build_pdf as compile_pdf
 from ppd.design import ensure_reference_design, enrich_design_from_pdf
@@ -617,7 +617,8 @@ class PPDApi:
         }
 
     def send_chat(self, content: str, message: str) -> dict[str, Any]:
-        return {"ok": True, "reply": chat_response(content, message)}
+        result = chat_response_structured(content, message)
+        return {"ok": True, **result}
 
     def get_skill_gap(self, content: str) -> dict[str, Any]:
         gap = skill_gap_analysis(content)
