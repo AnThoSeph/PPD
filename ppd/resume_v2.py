@@ -276,6 +276,16 @@ def structured_from_dict(data: dict[str, Any]) -> StructuredResume:
     return structured
 
 
+def resolve_visible_custom(section_name: str) -> int | None:
+    """If section_name is 'custom_N', return N. Otherwise return None."""
+    if section_name.startswith("custom_"):
+        try:
+            return int(section_name[7:])
+        except (ValueError, IndexError):
+            return None
+    return None
+
+
 def compute_visible_sections(
     structured: StructuredResume,
     found_headings: set[str] | None = None,
@@ -299,8 +309,8 @@ def compute_visible_sections(
         visible.append("education")
     if structured.certifications or "certifications" in found:
         visible.append("certifications")
-    if structured.custom_sections or "_custom" in found:
-        visible.append("custom_sections")
+    for i, _ in enumerate(structured.custom_sections):
+        visible.append(f"custom_{i}")
 
     skill_cats: list[str] = []
     for key in ("frontend", "backend", "database", "cloud_tools", "other"):

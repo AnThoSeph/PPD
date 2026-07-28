@@ -250,7 +250,8 @@ RULES:
 1. Preserve ALL existing data. Only modify what the user asks.
 2. visible_sections controls the display order of sections. Add new sections at the requested position.
 3. When adding entries (projects, experience, etc.), generate realistic placeholder content matching the person's title/field.
-4. To rename a built-in section (e.g. "Projects" → "Side Projects"), move its entries into custom_sections with the new title, remove the original section key, and update visible_sections accordingly.
+4. visible_sections uses custom_0, custom_1, ... for individual custom_sections entries (not "custom_sections" as a group).
+5. To rename a built-in section (e.g. "Projects" → "Side Projects"), move its entries into custom_sections with the new title, remove the original section key, and update visible_sections accordingly.
 5. Return ONLY the complete updated YAML starting with 'resume:'. No explanations, no markdown."""
 
 
@@ -510,6 +511,11 @@ def _rule_based_structured_chat(
         if result:
             return result
 
+    if has_remove:
+        result = _handle_remove(structured, yaml_text, msg, user_message, section_names)
+        if result:
+            return result
+
     if has_move and (has_before or has_after):
         found = []
         for kw, sec in section_names.items():
@@ -603,8 +609,9 @@ def _handle_rename(
     structured.custom_sections.append(CustomSection(title=new_title, items=items))
     if source_sec in structured.visible_sections:
         structured.visible_sections.remove(source_sec)
-    if "custom_sections" not in structured.visible_sections:
-        structured.visible_sections.append("custom_sections")
+    custom_key = f"custom_{len(structured.custom_sections) - 1}"
+    if custom_key not in structured.visible_sections:
+        structured.visible_sections.append(custom_key)
 
     updated_yaml = yaml.dump(
         ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
@@ -616,6 +623,116 @@ def _handle_rename(
         "structured": structured_to_dict(structured),
         "yaml": updated_yaml,
         "suggestions": [{"id": "refine-content", "label": f"Refine {new_title} content"}],
+        "assistant_message": reply,
+    }
+
+
+def _handle_remove(
+    structured: StructuredResume,
+    yaml_text: str,
+    msg: str,
+    user_message: str,
+    section_names: dict[str, str],
+) -> dict[str, Any] | None:
+    """Remove a section or specific entries from a section."""
+    words = msg.split()
+    target = None
+
+    # Find which section to remove — word after "remove"/"delete"
+    for i, w in enumerate(words):
+        if w.strip(" ,.:;!?") in ("remove", "delete") and i + 1 < len(words):
+            for j in range(i + 1, min(i + 4, len(words))):
+                word = words[j].strip(" ,.:;!?,").lower()
+                for kw, sec in section_names.items():
+                    if word in kw or kw.startswith(word) or word.startswith(kw):
+                        target = sec
+                        break
+                if target:
+                    break
+            break
+
+    if not target:
+        return None
+
+    removed_items = 0
+
+    if target == "projects" and structured.projects:
+        removed_items = len(structured.projects)
+        structured.projects = []
+    elif target == "experience" and structured.experience:
+        removed_items = len(structured.experience)
+        structured.experience = []
+    elif target == "education" and structured.education:
+        removed_items = len(structured.education)
+        structured.education = []
+    elif target == "certifications" and structured.certifications:
+        removed_items = len(structured.certifications)
+        structured.certifications = []
+    elif target == "summary":
+        if structured.summary.text:
+            removed_items = 1
+            structured.summary.text = None
+    elif target == "skills":
+        for cat in ("frontend", "backend", "database", "cloud_tools", "other"):
+            cat_items = getattr(structured.skills, cat)
+            removed_items += len(cat_items)
+            setattr(structured.skills, cat, [])
+    elif target == "custom_sections" and structured.custom_sections:
+        custom_title = _extract_custom_title(user_message)
+        if custom_title:
+            idx = next((i for i, cs in enumerate(structured.custom_sections)
+                        if cs.title.lower() == custom_title.lower()), None)
+            if idx is not None:
+                removed_items = len(structured.custom_sections[idx].items) or 1
+                title = structured.custom_sections[idx].title.title()
+                del structured.custom_sections[idx]
+                structured.visible_sections = [s for s in structured.visible_sections
+                                               if s != f"custom_{idx}"]
+                # Shift remaining custom_N keys down
+                vs_new = []
+                next_idx = 0
+                for s in structured.visible_sections:
+                    if s.startswith("custom_"):
+                        vs_new.append(f"custom_{next_idx}")
+                        next_idx += 1
+                    else:
+                        vs_new.append(s)
+                structured.visible_sections = vs_new
+                reply = f"Removed {title}"
+                updated_yaml = yaml.dump(
+                    ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
+                    sort_keys=False, allow_unicode=True, default_flow_style=False,
+                )
+                return {
+                    "reply": reply + ".",
+                    "structured": structured_to_dict(structured),
+                    "yaml": updated_yaml,
+                    "suggestions": [{"id": "undo", "label": f"Undo removal of {title}"}],
+                    "assistant_message": reply,
+                }
+        removed_items = len(structured.custom_sections)
+        structured.custom_sections = []
+
+    if removed_items == 0:
+        return None
+
+    if target in structured.visible_sections:
+        structured.visible_sections.remove(target)
+    elif target == "custom_sections":
+        structured.visible_sections = [s for s in structured.visible_sections
+                                       if not s.startswith("custom_")]
+
+    updated_yaml = yaml.dump(
+        ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),
+        sort_keys=False, allow_unicode=True, default_flow_style=False,
+    )
+    label = target.replace("_", " ").title()
+    reply = f"Removed {label}"
+    return {
+        "reply": reply + ".",
+        "structured": structured_to_dict(structured),
+        "yaml": updated_yaml,
+        "suggestions": [{"id": "undo", "label": f"Undo removal of {label}"}],
         "assistant_message": reply,
     }
 
@@ -758,9 +875,11 @@ def _apply_add_section(
             ))
             reply_parts.append(f"Added {title} section with {count} entries")
             modified = True
-        if "custom_sections" not in structured.visible_sections:
-            structured.visible_sections.append("custom_sections")
-            modified = True
+        new_idx = len(structured.custom_sections) - 1
+    custom_key = f"custom_{new_idx}"
+    if custom_key not in structured.visible_sections:
+        structured.visible_sections.append(custom_key)
+        modified = True
 
     elif section_type == "skills":
         if not any(getattr(structured.skills, cat) for cat in ("frontend", "backend", "database", "cloud_tools", "other")):
@@ -810,11 +929,13 @@ def _apply_add_section(
     if not modified:
         return None
 
-    default_order = [
+    custom_keys = sorted([s for s in structured.visible_sections if s.startswith("custom_")])
+    standard_order = [
         "personal", "summary", "experience", "projects",
-        "skills", "education", "certifications", "custom_sections",
+        "skills", "education", "certifications",
     ]
-    structured.visible_sections = [s for s in default_order if s in structured.visible_sections]
+    base = [s for s in standard_order if s in structured.visible_sections]
+    structured.visible_sections = base + custom_keys
 
     updated_yaml = yaml.dump(
         ResumeDocument(resume=structured).model_dump(mode="json", exclude_none=True),

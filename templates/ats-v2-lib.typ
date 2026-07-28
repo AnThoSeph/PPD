@@ -119,3 +119,72 @@
     }
   }
 }
+
+// Render resume sections in the order given by visible_sections.
+// section-title is a template-specific function(body-size, title) => content.
+// Title overrides let templates customize section headings (e.g. "Profile" vs "Summary").
+#let render-ordered-sections(
+  r,
+  section-title,
+  body-size,
+  summary-title: "Professional Summary",
+  experience-title: "Work Experience",
+  projects-title: "Projects",
+  skills-title: "Skills",
+  education-title: "Education",
+  certifications-title: "Certifications",
+) = {
+  let sections = if "visible_sections" in r { r.visible_sections } else { () }
+  // Fallback when visible_sections is missing or empty
+  if sections.len() == 0 {
+    sections = ("summary", "experience", "projects", "skills", "education", "certifications")
+    if "custom_sections" in r and r.custom_sections.len() > 0 { sections += ("custom_sections",) }
+  }
+  for sec in sections {
+    // Skip personal — rendered as the header block
+    if sec == "personal" { continue }
+
+    // Legacy: single "custom_sections" key renders all custom sections in order
+    if sec == "custom_sections" and "custom_sections" in r {
+      for cs in r.custom_sections {
+        if cs.items.len() > 0 {
+          section-title(cs.title)
+          for item in cs.items { par(hanging-indent: 12pt)[• #item] }
+        }
+      }
+      continue
+    }
+
+    // New format: custom_N maps to custom_sections[N]
+    if sec.starts-with("custom_") and "custom_sections" in r {
+      let idx = int(sec.slice(7))
+      if idx < r.custom_sections.len() and r.custom_sections.at(idx).items.len() > 0 {
+        let cs = r.custom_sections.at(idx)
+        section-title(cs.title)
+        for item in cs.items { par(hanging-indent: 12pt)[• #item] }
+      }
+      continue
+    }
+
+    // Standard built-in sections
+    if sec == "summary" and "summary" in r and "text" in r.summary and r.summary.text != none and r.summary.text != "" {
+      section-title(summary-title)
+      par(leading: 0.75em)[#r.summary.text]
+    } else if sec == "experience" and "experience" in r and r.experience.len() > 0 {
+      section-title(experience-title)
+      render-experience(r, body-size)
+    } else if sec == "projects" and "projects" in r and r.projects.len() > 0 {
+      section-title(projects-title)
+      render-projects(r, body-size)
+    } else if sec == "skills" and "skills" in r and has-skills(r.skills) {
+      section-title(skills-title)
+      render-skills-inline(r, body-size)
+    } else if sec == "education" and "education" in r and r.education.len() > 0 {
+      section-title(education-title)
+      render-education(r, body-size)
+    } else if sec == "certifications" and "certifications" in r and r.certifications.len() > 0 {
+      section-title(certifications-title)
+      render-certs(r)
+    }
+  }
+}

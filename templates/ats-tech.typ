@@ -43,39 +43,4 @@
 #v(0.15em)
 #line(length: 100%, stroke: 2pt + accent)
 
-#if "summary" in r and "text" in r.summary and r.summary.text != none and r.summary.text != "" {
-  section-title("Summary")
-  par(leading: 0.75em)[#r.summary.text]
-}
-
-#if "experience" in r and r.experience.len() > 0 {
-  section-title("Experience")
-  render-experience(r, body-size)
-}
-
-#if "projects" in r and r.projects.len() > 0 {
-  section-title("Projects")
-  render-projects(r, body-size)
-}
-
-#if "skills" in r and has-skills(r.skills) {
-  section-title("Skills")
-  render-skills-inline(r, body-size)
-}
-
-#if "education" in r and r.education.len() > 0 {
-  section-title("Education")
-  render-education(r, body-size)
-}
-
-#if "certifications" in r and r.certifications.len() > 0 {
-  section-title("Certifications")
-  render-certs(r)
-}
-
-#if "custom_sections" in r {
-  for sec in r.custom_sections {
-    section-title(sec.title)
-    for item in sec.items { par(hanging-indent: 12pt)[• #item] }
-  }
-}
+#render-ordered-sections(r, section-title, body-size, summary-title: "Summary")
